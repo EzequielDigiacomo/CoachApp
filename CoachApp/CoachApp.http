@@ -1,0 +1,46 @@
+@CoachApp_HostAddress = http://localhost:5203
+@token = PEGAR_ACA_EL_TOKEN_DEL_LOGIN
+
+### Login (usuario creado por el superadmin)
+POST {{CoachApp_HostAddress}}/api/auth/login
+Content-Type: application/json
+
+{
+  "nombreUsuario": "superadmin",
+  "password": "Admin123!"
+}
+
+### Datos del usuario autenticado
+GET {{CoachApp_HostAddress}}/api/auth/me
+Authorization: Bearer {{token}}
+Accept: application/json
+
+### Listar usuarios (solo superadmin)
+GET {{CoachApp_HostAddress}}/api/usuarios
+Authorization: Bearer {{token}}
+Accept: application/json
+
+### Crear un entrenador (solo superadmin)
+POST {{CoachApp_HostAddress}}/api/usuarios
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "nombreUsuario": "entrenador1",
+  "email": "entrenador1@coachapp.local",
+  "password": "Entrenador123!",
+  "nombre": "Juan",
+  "apellido": "Perez",
+  "rol": "Entrenador"
+}
+
+### Activar / desactivar una cuenta (solo superadmin)
+PATCH {{CoachApp_HostAddress}}/api/usuarios/2/estado
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "activo": false
+}
+
+###

@@ -1,0 +1,14 @@
+<Solution>
+  <Folder Name="/01.Api/">
+    <Project Path="CoachApp/CoachApp.csproj" />
+  </Folder>
+  <Folder Name="/02.Controladores/">
+    <Project Path="Controladores/Controladores.csproj" />
+  </Folder>
+  <Folder Name="/03.AccesoDatos/">
+    <Project Path="AccesoDatos/AccesoDatos.csproj" />
+  </Folder>
+  <Folder Name="/04.Entidades/">
+    <Project Path="Entidades/Entidades.csproj" />
+  </Folder>
+</Solution>

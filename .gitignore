@@ -1,0 +1,32 @@
+## Visual Studio / .NET
+.vs/
+bin/
+obj/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+## Build results
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+publish/
+*.dll
+*.pdb
+*.exe
+
+## NuGet
+*.nupkg
+packages/
+!packages/build/
+
+## Logs / temporales
+*.log
+*.tmp
+
+## Vite / Node (CoachApp.Web si aplica)
+node_modules/
+dist/
+.vite/
