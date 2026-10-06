@@ -216,6 +216,25 @@ namespace Controladores
             return Ok(actualizado!.ToDto());
         }
 
+        /// <summary>
+        /// Sesiones del atleta con asistencia marcada, de la mas nueva a la
+        /// mas vieja. Presente y ausente entran aunque no haya trabajos.
+        /// </summary>
+        [HttpGet("/api/atletas/{atletaId:int}/sesiones")]
+        public async Task<ActionResult<IEnumerable<SesionHistorialDto>>> HistorialAsistencia(int atletaId)
+        {
+            var vinculos = await _entrenamientoRepositorio.ObtenerHistorialAsistenciaAsync(atletaId);
+
+            return Ok(vinculos.Select(vinculo => new SesionHistorialDto
+            {
+                EntrenamientoId = vinculo.EntrenamientoId,
+                Fecha = vinculo.Entrenamiento.Fecha,
+                Turno = vinculo.Entrenamiento.Turno,
+                Sesion = vinculo.Entrenamiento.Sesion,
+                Asistio = vinculo.Asistio!.Value
+            }));
+        }
+
         private const string MensajeSlotOcupado =
             "Ya existe una sesion cargada para esa fecha, ese turno y ese numero de sesion.";
 

@@ -625,9 +625,11 @@ namespace Controladores.Integraciones
             return true;
         }
 
+        /// <summary>En Garmin el ciclismo es el registro del agua.</summary>
         private static TipoTrabajo TipoDe(string? tipoGarmin) => tipoGarmin switch
         {
-            "Carrera" or "Caminata" or "Ciclismo" => TipoTrabajo.Tierra,
+            "Carrera" or "Caminata" => TipoTrabajo.Tierra,
+            "Ciclismo" => TipoTrabajo.Agua,
             "Fuerza" => TipoTrabajo.Gimnasio,
             _ => TipoTrabajo.Agua
         };

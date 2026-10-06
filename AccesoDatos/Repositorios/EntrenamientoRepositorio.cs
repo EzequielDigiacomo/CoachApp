@@ -149,5 +149,14 @@ namespace AccesoDatos.Repositorios
             await _context.SaveChangesAsync();
             return true;
         }
+
+        public Task<List<EntrenamientoAtleta>> ObtenerHistorialAsistenciaAsync(int atletaId) =>
+            _context.EntrenamientoAtletas
+                .Where(ea => ea.AtletaId == atletaId && ea.Asistio != null)
+                .Include(ea => ea.Entrenamiento)
+                .OrderByDescending(ea => ea.Entrenamiento.Fecha)
+                .ThenByDescending(ea => ea.Entrenamiento.Turno)
+                .ThenByDescending(ea => ea.Entrenamiento.Sesion)
+                .ToListAsync();
     }
 }

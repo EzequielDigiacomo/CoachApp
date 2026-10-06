@@ -34,5 +34,11 @@ namespace AccesoDatos.Repositorios
 
         /// <summary>Marca la asistencia de un atleta. Devuelve false si no pertenece a la sesion.</summary>
         Task<bool> MarcarAsistenciaAsync(int entrenamientoId, int atletaId, bool? asistio);
+
+        /// <summary>
+        /// Sesiones en las que el atleta tiene asistencia marcada, de la mas
+        /// nueva a la mas vieja. El presente y el ausente entran; sin marcar, no.
+        /// </summary>
+        Task<List<EntrenamientoAtleta>> ObtenerHistorialAsistenciaAsync(int atletaId);
     }
 }

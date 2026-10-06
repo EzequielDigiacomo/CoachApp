@@ -28,5 +28,7 @@ namespace Controladores.Contratos
         Task<ActionResult<EntrenamientoDto>> QuitarAtleta(int id, int atletaId);
 
         Task<ActionResult<EntrenamientoDto>> MarcarAsistencia(int id, MarcarAsistenciaRequest request);
+
+        Task<ActionResult<IEnumerable<SesionHistorialDto>>> HistorialAsistencia(int atletaId);
     }
 }
