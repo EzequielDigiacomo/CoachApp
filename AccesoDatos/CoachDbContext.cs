@@ -1,4 +1,5 @@
 using Entidades;
+using Microsoft.AspNetCore.DataProtection.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 
 namespace AccesoDatos
@@ -6,7 +7,7 @@ namespace AccesoDatos
     /// <summary>
     /// Contexto de Entity Framework Core para la base de datos de CoachApp (PostgreSQL).
     /// </summary>
-    public class CoachDbContext : DbContext
+    public class CoachDbContext : DbContext, IDataProtectionKeyContext
     {
         public CoachDbContext(DbContextOptions<CoachDbContext> options) : base(options)
         {
@@ -23,6 +24,13 @@ namespace AccesoDatos
         public DbSet<TrabajoSerie> TrabajoSeries => Set<TrabajoSerie>();
         public DbSet<TrabajoPalada> TrabajoPaladas => Set<TrabajoPalada>();
         public DbSet<CuentaGarmin> CuentasGarmin => Set<CuentaGarmin>();
+
+        /// <summary>
+        /// Anillo de claves de Data Protection. En Render el disco es
+        /// efimero: si las claves no viven en la base, los tokens de Garmin
+        /// dejan de poder leerse en cada despliegue.
+        /// </summary>
+        public DbSet<DataProtectionKey> DataProtectionKeys => Set<DataProtectionKey>();
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

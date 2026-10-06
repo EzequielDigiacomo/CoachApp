@@ -3,6 +3,7 @@ using System;
 using AccesoDatos;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,10 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace AccesoDatos.Migraciones
 {
     [DbContext(typeof(CoachDbContext))]
-    partial class CoachDbContextModelSnapshot : ModelSnapshot
+    [Migration("20261006180000_ClavesDataProtection")]
+    partial class ClavesDataProtection
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -665,3 +667,4 @@ namespace AccesoDatos.Migraciones
         }
     }
 }
+

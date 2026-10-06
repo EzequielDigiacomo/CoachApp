@@ -1,0 +1,23 @@
+# Servicio web de la API. Las claves se cargan en el panel de Render:
+# no van en este archivo.
+services:
+  - type: web
+    name: coachapp-api
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - key: ASPNETCORE_ENVIRONMENT
+        value: Production
+      # Host de Neon sin "-pooler", SSL Mode=Require. Formato de Npgsql,
+      # no la URL postgresql://.
+      - key: ConnectionStrings__DefaultConnection
+        sync: false
+      - key: Jwt__Key
+        generateValue: true
+      # Origen del frontend, separado por comas si hay mas de uno.
+      # Ejemplo: https://coachapp-web.onrender.com,http://localhost:5173
+      - key: Cors__Origenes
+        sync: false
