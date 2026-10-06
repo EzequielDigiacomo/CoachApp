@@ -13,5 +13,7 @@ namespace Controladores.Contratos
         Task<IActionResult> Desvincular();
 
         Task<ActionResult<SincronizacionGarminDto>> Sincronizar(int entrenamientoId);
+
+        Task<ActionResult<CalendarioGarminDto>> Calendario(DateOnly? desde, bool mes);
     }
 }

@@ -78,6 +78,35 @@ namespace Controladores
         }
 
         /// <summary>
+        /// Actividades de los amigos en la semana o el mes que contiene la fecha.
+        /// Una consulta por amigo, para no pedir el historial completo.
+        /// </summary>
+        [HttpGet("calendario")]
+        public async Task<ActionResult<CalendarioGarminDto>> Calendario([FromQuery] DateOnly? desde, [FromQuery] bool mes = false)
+        {
+            var usuarioId = UsuarioActualId();
+            if (usuarioId is null)
+            {
+                return Unauthorized();
+            }
+
+            try
+            {
+                var semana = await _garmin.CalendarioAsync(
+                    usuarioId.Value,
+                    desde ?? DateOnly.FromDateTime(DateTime.Today),
+                    mes,
+                    HttpContext.RequestAborted);
+
+                return Ok(semana);
+            }
+            catch (GarminExcepcion ex)
+            {
+                return BadRequest(new { mensaje = ex.Message });
+            }
+        }
+
+        /// <summary>
         /// Lee las actividades de los amigos en la fecha de la sesion
         /// y las asocia a los atletas que se llaman igual.
         /// </summary>

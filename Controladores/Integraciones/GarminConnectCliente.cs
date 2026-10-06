@@ -12,6 +12,12 @@ namespace Controladores.Integraciones
 
     public sealed record AmigoGarmin(string DisplayName, string NombreCompleto);
 
+    /// <summary>Actividad vista en el feed de conexiones, con el dueno y el dia.</summary>
+    public sealed record ActividadAmigoGarmin(string DisplayName, string Nombre, DateOnly Fecha);
+
+    /// <summary>Un tramo de la actividad: una vuelta o un parcial de Garmin.</summary>
+    public sealed record TramoGarmin(double DistanciaMetros, double DuracionSegundos, double? Cadencia);
+
     /// <summary>Actividad leida de Garmin, todavia sin asociar a un atleta.</summary>
     public sealed record ActividadGarminLeida(
         long ActividadId,
@@ -23,7 +29,8 @@ namespace Controladores.Integraciones
         int? FcPromedio,
         int? FcMaxima,
         double? Cadencia,
-        int? Calorias);
+        int? Calorias,
+        IReadOnlyList<TramoGarmin>? Tramos = null);
 
     public interface IGarminConnectCliente
     {
@@ -35,10 +42,23 @@ namespace Controladores.Integraciones
 
         Task<IReadOnlyList<AmigoGarmin>> ObtenerAmigosAsync(string accessToken, CancellationToken cancelacion);
 
+        Task<IReadOnlyList<ActividadAmigoGarmin>> ObtenerFeedEntreAsync(
+            string accessToken,
+            DateOnly desde,
+            DateOnly hasta,
+            CancellationToken cancelacion);
+
         Task<IReadOnlyList<ActividadGarminLeida>> ObtenerActividadesDelDiaAsync(
             string accessToken,
             string displayName,
             DateOnly fecha,
+            CancellationToken cancelacion);
+
+        Task<IReadOnlyList<ActividadGarminLeida>> ObtenerActividadesEntreAsync(
+            string accessToken,
+            string displayName,
+            DateOnly desde,
+            DateOnly hasta,
             CancellationToken cancelacion);
 
         Task<ActividadGarminLeida> CompletarAsync(
@@ -223,6 +243,72 @@ namespace Controladores.Integraciones
             return amigos;
         }
 
+        public async Task<IReadOnlyList<ActividadAmigoGarmin>> ObtenerFeedEntreAsync(
+            string accessToken,
+            DateOnly desde,
+            DateOnly hasta,
+            CancellationToken cancelacion)
+        {
+            var actividades = new List<ActividadAmigoGarmin>();
+            var vistos = new HashSet<long>();
+
+            for (var start = 0; start < 800; start += 100)
+            {
+                var url =
+                    $"https://connectapi.garmin.com/activitylist-service/activities/subscription/feed?start={start}&limit=100";
+                using var documento = await GetOpcionalAsync(url, accessToken, cancelacion);
+                if (documento is null)
+                {
+                    break;
+                }
+
+                var pagina = 0;
+                var anteriores = 0;
+                foreach (var item in Enumerar(documento.RootElement, "activityList", "activities", "items"))
+                {
+                    pagina++;
+                    var id = LeerLong(item, "activityId") ?? 0;
+                    if (id > 0 && !vistos.Add(id))
+                    {
+                        continue;
+                    }
+
+                    var inicio = LeerFecha(item, "startTimeLocal") ?? LeerFecha(item, "startTimeGMT");
+                    if (inicio is null)
+                    {
+                        continue;
+                    }
+
+                    var dia = DateOnly.FromDateTime(inicio.Value);
+                    if (dia < desde)
+                    {
+                        anteriores++;
+                        continue;
+                    }
+
+                    if (dia > hasta)
+                    {
+                        continue;
+                    }
+
+                    var dueno = LeerDueno(item);
+                    if (dueno is null)
+                    {
+                        continue;
+                    }
+
+                    actividades.Add(new ActividadAmigoGarmin(dueno.Value.Display, dueno.Value.Nombre, dia));
+                }
+
+                if (pagina < 100 || anteriores > 0)
+                {
+                    break;
+                }
+            }
+
+            return actividades;
+        }
+
         public async Task<IReadOnlyList<ActividadGarminLeida>> ObtenerActividadesDelDiaAsync(
             string accessToken,
             string displayName,
@@ -259,6 +345,56 @@ namespace Controladores.Integraciones
             return [];
         }
 
+        public async Task<IReadOnlyList<ActividadGarminLeida>> ObtenerActividadesEntreAsync(
+            string accessToken,
+            string displayName,
+            DateOnly desde,
+            DateOnly hasta,
+            CancellationToken cancelacion)
+        {
+            var nombre = Uri.EscapeDataString(displayName);
+            var inicio = desde.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+            var fin = hasta.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+            var actividades = new List<ActividadGarminLeida>();
+            var vistos = new HashSet<long>();
+
+            for (var start = 0; start < 200; start += 50)
+            {
+                var url =
+                    $"https://connectapi.garmin.com/activitylist-service/activities/{nombre}?start={start}&limit=50&startDate={inicio}&endDate={fin}";
+
+                using var documento = await GetOpcionalAsync(url, accessToken, cancelacion);
+                if (documento is null)
+                {
+                    break;
+                }
+
+                var pagina = LeerActividades(documento.RootElement)
+                    .Where(a => a.ActividadId > 0 && a.InicioLocal is not null)
+                    .ToList();
+
+                var nuevas = 0;
+                foreach (var actividad in pagina)
+                {
+                    var dia = DateOnly.FromDateTime(actividad.InicioLocal!.Value);
+                    if (dia < desde || dia > hasta || !vistos.Add(actividad.ActividadId))
+                    {
+                        continue;
+                    }
+
+                    actividades.Add(actividad);
+                    nuevas++;
+                }
+
+                if (pagina.Count < 50 || nuevas == 0)
+                {
+                    break;
+                }
+            }
+
+            return actividades;
+        }
+
         public async Task<ActividadGarminLeida> CompletarAsync(
             string accessToken,
             ActividadGarminLeida actividad,
@@ -277,6 +413,17 @@ namespace Controladores.Integraciones
                 return actividad;
             }
 
+            var tramos = LeerTramos(documento.RootElement);
+            if (tramos.Count == 0)
+            {
+                var urlSplits = $"https://connectapi.garmin.com/activity-service/activity/{actividad.ActividadId}/splits";
+                using var splits = await GetOpcionalAsync(urlSplits, accessToken, cancelacion);
+                if (splits is not null)
+                {
+                    tramos = LeerTramos(splits.RootElement);
+                }
+            }
+
             return actividad with
             {
                 Nombre = string.IsNullOrWhiteSpace(detallada.Nombre) ? actividad.Nombre : detallada.Nombre,
@@ -287,7 +434,8 @@ namespace Controladores.Integraciones
                 FcPromedio = detallada.FcPromedio ?? actividad.FcPromedio,
                 FcMaxima = detallada.FcMaxima ?? actividad.FcMaxima,
                 Cadencia = detallada.Cadencia ?? actividad.Cadencia,
-                Calorias = detallada.Calorias ?? actividad.Calorias
+                Calorias = detallada.Calorias ?? actividad.Calorias,
+                Tramos = tramos
             };
         }
 
@@ -422,17 +570,90 @@ namespace Controladores.Integraciones
             var amigos = new List<AmigoGarmin>();
             foreach (var item in Enumerar(raiz, "userConnections", "connections", "connectionList", "items"))
             {
-                var display = LeerTexto(item, "displayName");
-                var nombre = LeerTexto(item, "fullName") ?? LeerTexto(item, "name");
-                if (string.IsNullOrWhiteSpace(display) || string.IsNullOrWhiteSpace(nombre))
+                var amigo = LeerAmigo(item);
+                if (amigo is not null)
+                {
+                    amigos.Add(amigo);
+                }
+            }
+
+            return amigos;
+        }
+
+        /// <summary>
+        /// Acepta al amigo aunque Garmin no mande el nombre completo: alcanza
+        /// el usuario. Si el dato viene anidado, lo busca un nivel adentro.
+        /// </summary>
+        private static AmigoGarmin? LeerAmigo(JsonElement item)
+        {
+            if (item.ValueKind != JsonValueKind.Object)
+            {
+                return null;
+            }
+
+            var display = LeerTexto(item, "displayName") ?? LeerTexto(item, "userName");
+            var nombre = LeerTexto(item, "fullName")
+                ?? LeerTexto(item, "name")
+                ?? LeerTexto(item, "userFullName");
+
+            if (!string.IsNullOrWhiteSpace(display))
+            {
+                return new AmigoGarmin(display, string.IsNullOrWhiteSpace(nombre) ? display : nombre);
+            }
+
+            foreach (var propiedad in item.EnumerateObject())
+            {
+                if (propiedad.Value.ValueKind != JsonValueKind.Object)
                 {
                     continue;
                 }
 
-                amigos.Add(new AmigoGarmin(display, nombre));
+                var anidado = LeerAmigo(propiedad.Value);
+                if (anidado is not null)
+                {
+                    return anidado;
+                }
             }
 
-            return amigos;
+            return null;
+        }
+
+        private static (string Display, string Nombre)? LeerDueno(JsonElement item)
+        {
+            if (item.ValueKind != JsonValueKind.Object)
+            {
+                return null;
+            }
+
+            var display = LeerTexto(item, "ownerDisplayName")
+                ?? LeerTexto(item, "userDisplayName")
+                ?? LeerTexto(item, "displayName")
+                ?? LeerTexto(item, "userName");
+
+            if (string.IsNullOrWhiteSpace(display))
+            {
+                foreach (var propiedad in item.EnumerateObject())
+                {
+                    if (propiedad.Value.ValueKind != JsonValueKind.Object)
+                    {
+                        continue;
+                    }
+
+                    var anidado = LeerDueno(propiedad.Value);
+                    if (anidado is not null)
+                    {
+                        return anidado;
+                    }
+                }
+
+                return null;
+            }
+
+            var nombre = LeerTexto(item, "ownerFullName")
+                ?? LeerTexto(item, "fullName")
+                ?? LeerTexto(item, "userFullName")
+                ?? display;
+            return (display, nombre);
         }
 
         private static List<ActividadGarminLeida> LeerActividades(JsonElement raiz)
@@ -478,6 +699,41 @@ namespace Controladores.Integraciones
                 LeerEntero(resumen, "maxHR") ?? LeerEntero(item, "maxHR"),
                 LeerCadencia(resumen) ?? LeerCadencia(item),
                 LeerEntero(resumen, "calories") ?? LeerEntero(item, "calories"));
+        }
+
+        private static List<TramoGarmin> LeerTramos(JsonElement raiz)
+        {
+            var tramos = new List<TramoGarmin>();
+
+            foreach (var item in Enumerar(raiz, "lapDTOs", "splitSummaries", "splits"))
+            {
+                if (item.ValueKind != JsonValueKind.Object || EsDescanso(item))
+                {
+                    continue;
+                }
+
+                var distancia = LeerDouble(item, "distance") ?? 0;
+                var duracion = LeerDouble(item, "duration", "elapsedDuration", "movingDuration") ?? 0;
+                if (distancia < 1 && duracion < 1)
+                {
+                    continue;
+                }
+
+                tramos.Add(new TramoGarmin(distancia, duracion, LeerCadencia(item)));
+            }
+
+            return tramos;
+        }
+
+        private static bool EsDescanso(JsonElement item)
+        {
+            var texto = LeerTexto(item, "intensity") ?? LeerTexto(item, "intensityType");
+            if (item.TryGetProperty("intensityDTO", out var dto) && dto.ValueKind == JsonValueKind.Object)
+            {
+                texto ??= LeerTexto(dto, "typeKey") ?? LeerTexto(dto, "type");
+            }
+
+            return texto is not null && texto.Contains("REST", StringComparison.OrdinalIgnoreCase);
         }
 
         private static bool EsDelDia(ActividadGarminLeida actividad, DateOnly fecha) =>

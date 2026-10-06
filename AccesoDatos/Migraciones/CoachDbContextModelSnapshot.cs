@@ -302,6 +302,9 @@ namespace AccesoDatos.Migraciones
                     b.Property<DateTime>("FechaCreacion")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<long?>("GarminActividadId")
+                        .HasColumnType("bigint");
+
                     b.Property<TimeOnly?>("HoraInicio")
                         .HasColumnType("time without time zone");
 

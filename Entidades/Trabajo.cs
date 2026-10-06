@@ -27,6 +27,13 @@ namespace Entidades
         /// <summary>Hora del dia en que se hizo el trabajo.</summary>
         public TimeOnly? HoraInicio { get; set; }
 
+        /// <summary>
+        /// Actividad de Garmin que origino este trabajo. Si tiene valor, al
+        /// volver a traer Garmin se actualiza este trabajo y no se duplica.
+        /// Los trabajos cargados a mano quedan en null.
+        /// </summary>
+        public long? GarminActividadId { get; set; }
+
         [MaxLength(300)]
         public string? Observaciones { get; set; }
 
