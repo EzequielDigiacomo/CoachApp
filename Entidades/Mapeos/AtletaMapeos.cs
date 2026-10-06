@@ -6,7 +6,7 @@ namespace Entidades.Mapeos
     public static class AtletaMapeos
     {
         /// <summary>
-        /// Arma el DTO del atleta y calcula la edad y la condicion de menor,
+        /// Arma el DTO del atleta y calcula la edad y las categorias,
         /// que no se guardan en la base sino que dependen de la fecha de hoy.
         /// </summary>
         public static AtletaDto ToDto(this Atleta atleta)
@@ -20,7 +20,7 @@ namespace Entidades.Mapeos
                 Apellido = atleta.Apellido,
                 FechaNacimiento = atleta.FechaNacimiento,
                 Edad = edad,
-                EsMenor = edad < 18,
+                Categorias = CategoriasAtleta.Nombres(atleta.FechaNacimiento),
                 Club = atleta.Club,
                 Email = atleta.Email,
                 Dni = atleta.Dni,

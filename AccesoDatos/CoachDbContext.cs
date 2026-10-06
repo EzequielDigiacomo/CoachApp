@@ -22,6 +22,7 @@ namespace AccesoDatos
         public DbSet<TrabajoEjercicio> TrabajoEjercicios => Set<TrabajoEjercicio>();
         public DbSet<TrabajoSerie> TrabajoSeries => Set<TrabajoSerie>();
         public DbSet<TrabajoPalada> TrabajoPaladas => Set<TrabajoPalada>();
+        public DbSet<CuentaGarmin> CuentasGarmin => Set<CuentaGarmin>();
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -66,6 +67,22 @@ namespace AccesoDatos
                 entity.HasOne(ea => ea.Atleta)
                     .WithMany(a => a.Entrenamientos)
                     .HasForeignKey(ea => ea.AtletaId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                // La hora de Garmin es local al reloj, no UTC.
+                entity.Property(ea => ea.GarminInicio).HasColumnType("timestamp without time zone");
+            });
+
+            modelBuilder.Entity<CuentaGarmin>(entity =>
+            {
+                entity.ToTable("CuentasGarmin");
+                entity.HasKey(c => c.UsuarioId);
+                entity.Property(c => c.AccessToken).HasColumnType("text");
+                entity.Property(c => c.RefreshToken).HasColumnType("text");
+
+                entity.HasOne(c => c.Usuario)
+                    .WithOne()
+                    .HasForeignKey<CuentaGarmin>(c => c.UsuarioId)
                     .OnDelete(DeleteBehavior.Cascade);
             });
 

@@ -27,6 +27,7 @@ builder.Services.AddScoped<IAtletaRepositorio, AtletaRepositorio>();
 builder.Services.AddScoped<IEntrenamientoRepositorio, EntrenamientoRepositorio>();
 builder.Services.AddScoped<ITrabajoRepositorio, TrabajoRepositorio>();
 builder.Services.AddScoped<IAnotacionRepositorio, AnotacionRepositorio>();
+builder.Services.AddScoped<ICuentaGarminRepositorio, CuentaGarminRepositorio>();
 builder.Services.AddScoped<PasswordServicio>();
 builder.Services.AddScoped<ITokenServicio, TokenServicio>();
 builder.Services.AddScoped<SuperAdminSeeder>();
@@ -39,12 +40,23 @@ builder.Services.AddScoped<IEntrenamientosController, EntrenamientosController>(
 builder.Services.AddScoped<ITrabajosController, TrabajosController>();
 builder.Services.AddScoped<IAnotacionesController, AnotacionesController>();
 builder.Services.AddScoped<IIntegracionesController, IntegracionesController>();
+builder.Services.AddScoped<IGarminController, GarminController>();
+builder.Services.AddScoped<IGarminServicio, GarminServicio>();
 
 // El lector de planillas sale a internet: se le pone un tiempo limite para que
 // una hoja lenta no deje colgada la peticion.
 builder.Services.AddHttpClient<ILectorHojasGoogle, LectorHojasGoogle>(cliente =>
 {
     cliente.Timeout = TimeSpan.FromMinutes(3);
+});
+
+builder.Services.AddHttpClient<IGarminConnectCliente, GarminConnectCliente>(cliente =>
+{
+    cliente.Timeout = TimeSpan.FromSeconds(40);
+})
+.ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler
+{
+    AutomaticDecompression = System.Net.DecompressionMethods.All
 });
 
 // El libro bajado se guarda en memoria un rato: pesa varios MB y conviene

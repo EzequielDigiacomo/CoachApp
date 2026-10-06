@@ -46,9 +46,34 @@ namespace Entidades.Mapeos
                 Apellido = vinculo.Atleta.Apellido,
                 Dni = vinculo.Atleta.Dni,
                 Edad = edad,
-                EsMenor = edad < 18,
+                Categorias = CategoriasAtleta.Nombres(vinculo.Atleta.FechaNacimiento),
                 Asistio = vinculo.Asistio,
-                CantidadTrabajos = vinculo.Trabajos.Count
+                CantidadTrabajos = vinculo.Trabajos.Count,
+                Garmin = ActividadDe(vinculo)
+            };
+        }
+
+        /// <summary>Arma el resumen de la actividad solo cuando hay un id de Garmin.</summary>
+        private static ActividadGarminDto? ActividadDe(EntrenamientoAtleta vinculo)
+        {
+            if (vinculo.GarminActividadId is not long actividadId)
+            {
+                return null;
+            }
+
+            return new ActividadGarminDto
+            {
+                ActividadId = actividadId,
+                Nombre = vinculo.GarminNombre ?? "Actividad",
+                Tipo = vinculo.GarminTipo,
+                Inicio = vinculo.GarminInicio?.ToString("HH:mm"),
+                DistanciaMetros = vinculo.GarminDistanciaMetros,
+                DuracionSegundos = vinculo.GarminDuracionSegundos,
+                FcPromedio = vinculo.GarminFcPromedio,
+                FcMaxima = vinculo.GarminFcMaxima,
+                Cadencia = vinculo.GarminCadencia,
+                Calorias = vinculo.GarminCalorias,
+                Url = "https://connect.garmin.com/app/activity/" + actividadId
             };
         }
     }

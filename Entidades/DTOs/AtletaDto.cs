@@ -11,8 +11,8 @@ namespace Entidades.DTOs
         /// <summary>Edad en anios, calculada al momento de la consulta.</summary>
         public int Edad { get; set; }
 
-        /// <summary>true si todavia no cumplio 18 anios.</summary>
-        public bool EsMenor { get; set; }
+        /// <summary>Nombres de las categorias que cubre esa edad.</summary>
+        public List<string> Categorias { get; set; } = [];
 
         public string? Club { get; set; }
         public string? Email { get; set; }
