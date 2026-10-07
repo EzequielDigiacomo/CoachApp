@@ -33,10 +33,11 @@ namespace Entidades.Mapeos
                 anterior = parcial.Tiempo;
             }
 
-            // Las muestras de ppm se reparten segun su tiempo: cada una cae en el
-            // parcial que le corresponde, y ademas quedan todas juntas en el DTO
-            // (que es lo que necesita el formulario para poder editarlas).
-            var acumulados = ordenados.Select(p => p.Tiempo).ToList();
+            // Las muestras de ppm se reparten segun el cronometro corrido: cada
+            // parcial guarda cuanto duro ese tramo, y se suman para saber hasta
+            // donde llega. Ademas quedan todas juntas en el DTO (que es lo que
+            // necesita el formulario para poder editarlas).
+            var duraciones = ordenados.Select(p => p.Tiempo).ToList();
             var paladas = new List<PaladaDto>();
 
             foreach (var palada in trabajo.Paladas.OrderBy(p => p.Orden))
@@ -53,7 +54,7 @@ namespace Entidades.Mapeos
 
                 if (parciales.Count > 0)
                 {
-                    parciales[ParcialDe(palada.Tiempo, acumulados)].Paladas.Add(dto);
+                    parciales[ParcialDe(palada.Tiempo, duraciones)].Paladas.Add(dto);
                 }
             }
 
@@ -99,22 +100,26 @@ namespace Entidades.Mapeos
         }
 
         /// <summary>
-        /// El parcial al que corresponde una muestra tomada en el tiempo indicado:
-        /// el primero cuyo tiempo acumulado sea mayor. Una muestra de 1:40 va al
-        /// parcial de 1:45 y una de 15" al de 0:50. Lo que pasa del ultimo parcial
-        /// se queda en el ultimo para no perder la muestra.
+        /// El parcial al que corresponde una muestra del cronometro corrido.
+        /// Cada tiempo es la duracion de ese tramo: se suman para armar la marca.
+        /// Con 1:53, 2:00 y 2:09, una muestra de 4:03 cae en el tercero
+        /// (1:53 + 2:00 = 3:53, y el total llega a ~6:03). Lo que pasa del
+        /// tiempo total se queda en el ultimo para no perder la muestra.
         /// </summary>
-        private static int ParcialDe(TimeSpan tiempo, List<TimeSpan> acumulados)
+        private static int ParcialDe(TimeSpan tiempo, List<TimeSpan> duraciones)
         {
-            for (var i = 0; i < acumulados.Count; i++)
+            var acumulado = TimeSpan.Zero;
+
+            for (var i = 0; i < duraciones.Count; i++)
             {
-                if (tiempo < acumulados[i])
+                acumulado += duraciones[i];
+                if (tiempo < acumulado)
                 {
                     return i;
                 }
             }
 
-            return acumulados.Count - 1;
+            return duraciones.Count - 1;
         }
     }
 }

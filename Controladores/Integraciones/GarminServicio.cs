@@ -35,6 +35,8 @@ namespace Controladores.Integraciones
         private readonly IEntrenamientoRepositorio _entrenamientos;
         private readonly ITrabajoRepositorio _trabajos;
         private readonly IDataProtector _protector;
+        private readonly SemaphoreSlim _renovacion = new(1, 1);
+        private int _renovaciones;
 
         public GarminServicio(
             IGarminConnectCliente garmin,
@@ -112,16 +114,42 @@ namespace Controladores.Integraciones
 
             var inicio = mes ? new DateOnly(desde.Year, desde.Month, 1) : LunesDe(desde);
             var fin = mes ? inicio.AddMonths(1).AddDays(-1) : inicio.AddDays(6);
-            var amigos = (await EjecutarAsync(
-                    cuenta,
-                    access => _garmin.ObtenerAmigosAsync(access, cancelacion),
-                    cancelacion))
-                .ToList();
+            GarminExcepcion? bloqueo = null;
+            List<AmigoGarmin> amigos;
+            try
+            {
+                amigos = (await EjecutarAsync(
+                        cuenta,
+                        access => _garmin.ObtenerAmigosAsync(access, cancelacion),
+                        cancelacion))
+                    .ToList();
+            }
+            catch (GarminExcepcion ex) when (ex.Prohibido)
+            {
+                bloqueo = ex;
+                amigos = [];
+            }
 
-            var feed = await EjecutarAsync(
-                cuenta,
-                access => _garmin.ObtenerFeedEntreAsync(access, inicio, fin, cancelacion),
-                cancelacion);
+            IReadOnlyList<ActividadAmigoGarmin> feed;
+            var feedProhibido = false;
+            try
+            {
+                feed = await EjecutarAsync(
+                    cuenta,
+                    access => _garmin.ObtenerFeedEntreAsync(access, inicio, fin, cancelacion),
+                    cancelacion);
+            }
+            catch (GarminExcepcion ex) when (ex.Prohibido)
+            {
+                bloqueo ??= ex;
+                feed = [];
+                feedProhibido = true;
+            }
+
+            if (amigos.Count == 0 && feed.Count == 0 && bloqueo is not null)
+            {
+                throw bloqueo;
+            }
 
             var conocidos = new HashSet<string>(amigos.Select(a => a.DisplayName), StringComparer.OrdinalIgnoreCase);
             foreach (var novedad in feed)
@@ -137,21 +165,36 @@ namespace Controladores.Integraciones
                 .ToList();
 
             var cargados = new Dictionary<string, HashSet<DateOnly>>(StringComparer.OrdinalIgnoreCase);
+            var actividadesProhibidas = 0;
             using var puerta = new SemaphoreSlim(4);
             var tareas = amigos.Select(async amigo =>
             {
                 await puerta.WaitAsync(cancelacion);
                 try
                 {
-                    var actividades = await EjecutarAsync(
-                        cuenta,
-                        access => _garmin.ObtenerActividadesEntreAsync(
-                            access,
-                            amigo.DisplayName,
-                            inicio,
-                            fin,
-                            cancelacion),
-                        cancelacion);
+                    IReadOnlyList<ActividadGarminLeida> actividades;
+                    try
+                    {
+                        actividades = await EjecutarAsync(
+                            cuenta,
+                            access => _garmin.ObtenerActividadesEntreAsync(
+                                access,
+                                amigo.DisplayName,
+                                inicio,
+                                fin,
+                                cancelacion),
+                            cancelacion);
+                    }
+                    catch (GarminExcepcion ex) when (ex.Prohibido)
+                    {
+                        Interlocked.Increment(ref actividadesProhibidas);
+                        lock (cargados)
+                        {
+                            bloqueo ??= ex;
+                        }
+
+                        actividades = [];
+                    }
 
                     var dias = actividades
                         .Where(a => a.InicioLocal is not null)
@@ -170,6 +213,11 @@ namespace Controladores.Integraciones
             });
 
             await Task.WhenAll(tareas);
+
+            if (feedProhibido && amigos.Count > 0 && actividadesProhibidas == amigos.Count && bloqueo is not null)
+            {
+                throw bloqueo;
+            }
 
             foreach (var novedad in feed)
             {
@@ -412,16 +460,34 @@ namespace Controladores.Integraciones
 
         private async Task RenovarAsync(CuentaGarmin cuenta, CancellationToken cancelacion)
         {
-            var sesion = await _garmin.RefrescarAsync(
-                Desproteger(cuenta.RefreshToken),
-                cuenta.ClientId,
-                cancelacion);
+            // El calendario consulta varios amigos a la vez. Si el token vencio,
+            // una sola renovacion tiene que servirles a todas: Garmin invalida
+            // el refresh anterior en cuanto se usa.
+            var vista = Volatile.Read(ref _renovaciones);
+            await _renovacion.WaitAsync(cancelacion);
+            try
+            {
+                if (Volatile.Read(ref _renovaciones) != vista)
+                {
+                    return;
+                }
 
-            cuenta.AccessToken = _protector.Protect(sesion.AccessToken);
-            cuenta.RefreshToken = _protector.Protect(sesion.RefreshToken);
-            cuenta.ClientId = sesion.ClientId;
-            cuenta.ExpiraUtc = sesion.ExpiraUtc;
-            await _cuentas.GuardarAsync(cuenta);
+                var sesion = await _garmin.RefrescarAsync(
+                    Desproteger(cuenta.RefreshToken),
+                    cuenta.ClientId,
+                    cancelacion);
+
+                cuenta.AccessToken = _protector.Protect(sesion.AccessToken);
+                cuenta.RefreshToken = _protector.Protect(sesion.RefreshToken);
+                cuenta.ClientId = sesion.ClientId;
+                cuenta.ExpiraUtc = sesion.ExpiraUtc;
+                await _cuentas.GuardarAsync(cuenta);
+                Interlocked.Increment(ref _renovaciones);
+            }
+            finally
+            {
+                _renovacion.Release();
+            }
         }
 
         private string Desproteger(string valor)
@@ -698,10 +764,13 @@ namespace Controladores.Integraciones
                     segundos += tramo.DuracionSegundos;
                 }
 
+                // Se guarda cuanto duro el tramo, no la marca acumulada: las paladas
+                // se ubican sumando esas duraciones sobre el cronometro corrido.
                 // La muestra va a la mitad del tramo para que caiga en ese parcial
                 // y no en el siguiente, que arranca cuando el tiempo es igual.
-                var medio = inicio + Math.Max(segundos - inicio, 0) / 2;
-                marcas.Add(Marca(distancia, segundos, medio, tramo.Cadencia ?? actividad.Cadencia));
+                var duracion = Math.Max(segundos - inicio, 0);
+                var medio = inicio + duracion / 2;
+                marcas.Add(Marca(distancia, duracion, medio, tramo.Cadencia ?? actividad.Cadencia));
             }
 
             return marcas;

@@ -17,8 +17,9 @@ namespace Entidades.DTOs
         public string? Parcial { get; set; }
 
         /// <summary>
-        /// Muestras de paladas por minuto que cayeron dentro de este parcial,
-        /// o sea las tomadas entre el tiempo acumulado anterior y el de este.
+        /// Muestras de paladas por minuto que cayeron dentro de este parcial.
+        /// El cronometro sigue de corrido: el tramo va desde la suma de las
+        /// duraciones anteriores hasta sumarle la de este.
         /// </summary>
         public List<PaladaDto> Paladas { get; set; } = [];
 

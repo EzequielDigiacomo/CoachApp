@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Globalization;
 using System.Net;
 using System.Net.Http.Headers;
@@ -119,15 +120,14 @@ namespace Controladores.Integraciones
                 Encoding.UTF8,
                 "application/json");
 
-            using var respuesta = await _http.SendAsync(pedido, cancelacion);
-            var texto = await respuesta.Content.ReadAsStringAsync(cancelacion);
+            var (codigo, texto) = await EnviarAsync(pedido, cancelacion);
 
-            if (respuesta.StatusCode == HttpStatusCode.TooManyRequests)
+            if (codigo == HttpStatusCode.TooManyRequests)
             {
                 throw new GarminExcepcion("Garmin limitó los intentos de ingreso. Probá más tarde.", limite: true);
             }
 
-            if (respuesta.StatusCode == HttpStatusCode.Forbidden || !PareceJson(texto))
+            if (codigo == HttpStatusCode.Forbidden || !PareceJson(texto))
             {
                 throw new GarminExcepcion("Garmin bloqueó el inicio de sesión. Probá de nuevo en unos minutos.");
             }
@@ -483,18 +483,18 @@ namespace Controladores.Integraciones
                 Convert.ToBase64String(Encoding.UTF8.GetBytes(clientId + ":")));
             pedido.Content = new FormUrlEncodedContent(formulario);
 
-            using var respuesta = await _http.SendAsync(pedido, cancelacion);
-            if (respuesta.StatusCode == HttpStatusCode.TooManyRequests)
+            var (codigo, texto) = await EnviarAsync(pedido, cancelacion);
+            if (codigo == HttpStatusCode.TooManyRequests)
             {
                 throw new GarminExcepcion("Garmin limitó los intentos. Probá más tarde.", limite: true);
             }
 
-            if (!respuesta.IsSuccessStatusCode)
+            if (codigo is < HttpStatusCode.OK or >= HttpStatusCode.MultipleChoices)
             {
                 throw new GarminExcepcion(mensajeFallo);
             }
 
-            using var documento = JsonDocument.Parse(await respuesta.Content.ReadAsStringAsync(cancelacion));
+            using var documento = JsonDocument.Parse(texto);
             var access = LeerTexto(documento.RootElement, "access_token");
             var refresh = LeerTexto(documento.RootElement, "refresh_token");
             if (string.IsNullOrWhiteSpace(access) || string.IsNullOrWhiteSpace(refresh))
@@ -521,28 +521,35 @@ namespace Controladores.Integraciones
             AplicarCabecerasNativas(pedido);
             pedido.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
 
-            using var respuesta = await _http.SendAsync(pedido, cancelacion);
-            if (respuesta.StatusCode == HttpStatusCode.Unauthorized)
+            var (codigo, texto) = await EnviarAsync(pedido, cancelacion);
+            if (codigo == HttpStatusCode.Unauthorized)
             {
                 throw new GarminExcepcion("La sesión de Garmin venció.", sesionVencida: true);
             }
 
-            if (respuesta.StatusCode is HttpStatusCode.NotFound or HttpStatusCode.BadRequest)
+            if (codigo is HttpStatusCode.NotFound or HttpStatusCode.BadRequest)
             {
                 return null;
             }
 
-            if (respuesta.StatusCode == HttpStatusCode.TooManyRequests)
+            if (codigo == HttpStatusCode.TooManyRequests)
             {
                 throw new GarminExcepcion("Garmin limitó las consultas. Probá más tarde.", limite: true);
             }
 
-            if (!respuesta.IsSuccessStatusCode)
+            if (codigo == HttpStatusCode.Forbidden)
             {
-                throw new GarminExcepcion("Garmin no dejó leer los datos (" + (int)respuesta.StatusCode + ").");
+                throw new GarminExcepcion(
+                    "Garmin no dejó leer los datos (403).",
+                    sesionVencida: PareceRechazoDeToken(texto),
+                    prohibido: true);
             }
 
-            var texto = await respuesta.Content.ReadAsStringAsync(cancelacion);
+            if (codigo is < HttpStatusCode.OK or >= HttpStatusCode.MultipleChoices)
+            {
+                throw new GarminExcepcion("Garmin no dejó leer los datos (" + (int)codigo + ").");
+            }
+
             if (!PareceJson(texto))
             {
                 throw new GarminExcepcion("Garmin bloqueó la consulta. Probá de nuevo en unos minutos.");
@@ -563,6 +570,222 @@ namespace Controladores.Integraciones
             pedido.Headers.TryAddWithoutValidation("X-Lang", "en");
             pedido.Headers.TryAddWithoutValidation("X-GCExperience", "GC5");
             pedido.Headers.TryAddWithoutValidation("Accept", "application/json");
+            pedido.Headers.TryAddWithoutValidation("Accept-Language", "en-US,en;q=0.9");
+        }
+
+        /// <summary>
+        /// Manda el pedido con HttpClient. Si Garmin responde 403 o una pagina
+        /// en lugar de JSON, reintenta con un curl que se presenta como Chrome:
+        /// desde Render el TLS de .NET no pasa el filtro y desde la PC si.
+        /// </summary>
+        private async Task<(HttpStatusCode Codigo, string Cuerpo)> EnviarAsync(
+            HttpRequestMessage pedido,
+            CancellationToken cancelacion)
+        {
+            byte[]? cuerpoPedido = null;
+            MediaTypeHeaderValue? tipo = null;
+            if (pedido.Content is not null)
+            {
+                tipo = pedido.Content.Headers.ContentType;
+                cuerpoPedido = await pedido.Content.ReadAsByteArrayAsync(cancelacion);
+                pedido.Content = new ByteArrayContent(cuerpoPedido);
+                if (tipo is not null)
+                {
+                    pedido.Content.Headers.ContentType = tipo;
+                }
+            }
+
+            using var respuesta = await _http.SendAsync(pedido, cancelacion);
+            var cuerpo = await respuesta.Content.ReadAsStringAsync(cancelacion);
+            if (!ConvieneReintentar(respuesta.StatusCode, cuerpo))
+            {
+                return (respuesta.StatusCode, cuerpo);
+            }
+
+            var reintento = await ReintentarComoNavegadorAsync(pedido, cuerpoPedido, tipo, cancelacion);
+            return reintento ?? (respuesta.StatusCode, cuerpo);
+        }
+
+        private static bool ConvieneReintentar(HttpStatusCode codigo, string cuerpo) =>
+            codigo == HttpStatusCode.Forbidden
+            || (codigo == HttpStatusCode.OK && !PareceJson(cuerpo));
+
+        private static async Task<(HttpStatusCode Codigo, string Cuerpo)?> ReintentarComoNavegadorAsync(
+            HttpRequestMessage pedido,
+            byte[]? cuerpoPedido,
+            MediaTypeHeaderValue? tipo,
+            CancellationToken cancelacion)
+        {
+            var curl = RutaCurl();
+            if (curl is null || pedido.RequestUri is null)
+            {
+                return null;
+            }
+
+            var directorio = Path.Combine(Path.GetTempPath(), "garmin-" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(directorio);
+            var config = Path.Combine(directorio, "pedido.txt");
+            var salida = Path.Combine(directorio, "respuesta.txt");
+            var datos = Path.Combine(directorio, "cuerpo.txt");
+
+            try
+            {
+                var lineas = new List<string>
+                {
+                    "silent",
+                    "show-error",
+                    "max-time = 30",
+                    "max-redirs = 5",
+                    "location",
+                    "output = " + EntreComillas(salida),
+                    "write-out = \"%{http_code}\"",
+                    "url = " + EntreComillas(pedido.RequestUri.AbsoluteUri)
+                };
+
+                if (pedido.Method != HttpMethod.Get)
+                {
+                    lineas.Add("request = " + EntreComillas(pedido.Method.Method));
+                }
+
+                foreach (var cabecera in pedido.Headers)
+                {
+                    if (cabecera.Key.Equals("User-Agent", StringComparison.OrdinalIgnoreCase))
+                    {
+                        continue;
+                    }
+
+                    lineas.Add("header = " + EntreComillas(cabecera.Key + ": " + string.Join(", ", cabecera.Value)));
+                }
+
+                if (cuerpoPedido is { Length: > 0 })
+                {
+                    await File.WriteAllBytesAsync(datos, cuerpoPedido, cancelacion);
+                    lineas.Add("data-binary = " + EntreComillas("@" + datos));
+                    if (tipo is not null)
+                    {
+                        lineas.Add("header = " + EntreComillas("Content-Type: " + tipo));
+                    }
+                }
+
+                await File.WriteAllLinesAsync(config, lineas, cancelacion);
+
+                var info = new ProcessStartInfo
+                {
+                    FileName = curl,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    UseShellExecute = false,
+                    CreateNoWindow = true
+                };
+                info.ArgumentList.Add("--compressed");
+                info.ArgumentList.Add("--impersonate");
+                info.ArgumentList.Add("chrome146");
+                info.ArgumentList.Add("--config");
+                info.ArgumentList.Add(config);
+
+                var certificados = "/etc/ssl/certs/ca-certificates.crt";
+                if (File.Exists(certificados))
+                {
+                    info.Environment["SSL_CERT_FILE"] = certificados;
+                }
+
+                using var proceso = new Process { StartInfo = info };
+                if (!proceso.Start())
+                {
+                    return null;
+                }
+
+                var lectura = proceso.StandardOutput.ReadToEndAsync();
+                var errores = proceso.StandardError.ReadToEndAsync();
+                try
+                {
+                    using var limite = CancellationTokenSource.CreateLinkedTokenSource(cancelacion);
+                    limite.CancelAfter(TimeSpan.FromSeconds(35));
+                    await proceso.WaitForExitAsync(limite.Token);
+                }
+                catch (OperationCanceledException)
+                {
+                    try
+                    {
+                        proceso.Kill(entireProcessTree: true);
+                    }
+                    catch (InvalidOperationException)
+                    {
+                        // El proceso ya habia terminado.
+                    }
+
+                    try
+                    {
+                        await lectura;
+                        await errores;
+                    }
+                    catch (IOException)
+                    {
+                        // El proceso murio a mitad de la salida.
+                    }
+
+                    if (cancelacion.IsCancellationRequested)
+                    {
+                        throw;
+                    }
+
+                    return null;
+                }
+
+                var codigoTexto = (await lectura).Trim();
+                await errores;
+                if (proceso.ExitCode != 0 || !int.TryParse(codigoTexto, NumberStyles.Integer, CultureInfo.InvariantCulture, out var codigo))
+                {
+                    return null;
+                }
+
+                var cuerpo = File.Exists(salida)
+                    ? await File.ReadAllTextAsync(salida, cancelacion)
+                    : "";
+                return ((HttpStatusCode)codigo, cuerpo);
+            }
+            catch (Exception ex) when (ex is IOException or System.ComponentModel.Win32Exception)
+            {
+                return null;
+            }
+            finally
+            {
+                try
+                {
+                    Directory.Delete(directorio, recursive: true);
+                }
+                catch (IOException)
+                {
+                    // El temporal se limpia solo. No es el resultado de Garmin.
+                }
+            }
+        }
+
+        private static string? RutaCurl()
+        {
+            var explicita = Environment.GetEnvironmentVariable("GARMIN_CURL");
+            if (!string.IsNullOrWhiteSpace(explicita) && File.Exists(explicita))
+            {
+                return explicita;
+            }
+
+            const string defecto = "/opt/curl-impersonate/curl-impersonate";
+            return File.Exists(defecto) ? defecto : null;
+        }
+
+        private static string EntreComillas(string valor) =>
+            "\"" + valor.Replace("\\", "\\\\", StringComparison.Ordinal).Replace("\"", "\\\"", StringComparison.Ordinal) + "\"";
+
+        private static bool PareceRechazoDeToken(string texto)
+        {
+            if (!PareceJson(texto))
+            {
+                return false;
+            }
+
+            return texto.Contains("token", StringComparison.OrdinalIgnoreCase)
+                || texto.Contains("expired", StringComparison.OrdinalIgnoreCase)
+                || texto.Contains("unauthorized", StringComparison.OrdinalIgnoreCase);
         }
 
         private static List<AmigoGarmin> LeerAmigos(JsonElement raiz)
