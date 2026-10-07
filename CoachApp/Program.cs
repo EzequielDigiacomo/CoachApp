@@ -167,7 +167,15 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
-app.MapGet("/health", () => Results.Ok(new { estado = "ok" }));
+app.MapGet("/health", () =>
+{
+    var curl = Environment.GetEnvironmentVariable("GARMIN_CURL");
+    return Results.Ok(new
+    {
+        estado = "ok",
+        garminCurl = !string.IsNullOrWhiteSpace(curl) && File.Exists(curl)
+    });
+});
 
 // Crea el superadmin inicial si todavia no existe ninguna cuenta de ese rol.
 using (var scope = app.Services.CreateScope())
