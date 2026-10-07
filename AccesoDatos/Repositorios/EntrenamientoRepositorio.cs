@@ -46,9 +46,10 @@ namespace AccesoDatos.Repositorios
                 query = query.Where(e => e.Sesion == sesion);
             }
 
-            // Orden cronologico: lo que viene primero es lo que el coach tiene mas cerca.
+            // Lo ultimo cargado primero: el dia de hoy arriba y el mas viejo abajo.
+            // Dentro del mismo dia, las sesiones siguen en orden (manana 1, luego 2).
             return await query
-                .OrderBy(e => e.Fecha)
+                .OrderByDescending(e => e.Fecha)
                 .ThenBy(e => e.Turno)
                 .ThenBy(e => e.Sesion)
                 .ToListAsync();
