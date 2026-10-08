@@ -59,8 +59,15 @@ namespace AccesoDatos.Repositorios
             _context.Entrenamientos
                 .Include(e => e.Atletas)
                     .ThenInclude(ea => ea.Atleta)
+                // El detalle muestra un resumen de lo cargado en la fila del atleta:
+                // hacen falta los parciales y los ejercicios con sus series.
                 .Include(e => e.Atletas)
                     .ThenInclude(ea => ea.Trabajos)
+                        .ThenInclude(t => t.Parciales)
+                .Include(e => e.Atletas)
+                    .ThenInclude(ea => ea.Trabajos)
+                        .ThenInclude(t => t.Ejercicios)
+                            .ThenInclude(e => e.Series)
                 .FirstOrDefaultAsync(e => e.Id == id);
 
         public Task<bool> ExisteSlotAsync(DateOnly fecha, Turno turno, int sesion, int? excluirId = null) =>

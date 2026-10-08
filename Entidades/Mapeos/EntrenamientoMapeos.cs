@@ -1,4 +1,6 @@
 using Entidades.DTOs;
+using Entidades.Enums;
+using Entidades.Util;
 
 namespace Entidades.Mapeos
 {
@@ -49,7 +51,69 @@ namespace Entidades.Mapeos
                 Categorias = CategoriasAtleta.Nombres(vinculo.Atleta.FechaNacimiento),
                 Asistio = vinculo.Asistio,
                 CantidadTrabajos = vinculo.Trabajos.Count,
+                ResumenTrabajos = ResumenDe(vinculo.Trabajos),
                 Garmin = ActividadDe(vinculo)
+            };
+        }
+
+        /// <summary>
+        /// Resumen de los trabajos cargados, en el orden en que se hicieron.
+        /// Un trabajo sin datos cargados no aporta nada, asi que se omite.
+        /// </summary>
+        private static List<ResumenTrabajoDto> ResumenDe(IEnumerable<Trabajo> trabajos) =>
+            trabajos
+                .OrderBy(t => t.HoraInicio)
+                .ThenBy(t => t.Id)
+                .Select(ResumenDe)
+                .OfType<ResumenTrabajoDto>()
+                .ToList();
+
+        /// <summary>
+        /// Arma el resumen de un trabajo. En gimnasio son los kg de cada ejercicio
+        /// y en tierra y agua, el mejor tiempo de los parciales. null cuando no
+        /// hay nada que mostrar.
+        /// </summary>
+        private static ResumenTrabajoDto? ResumenDe(Trabajo trabajo)
+        {
+            if (trabajo.Tipo == TipoTrabajo.Gimnasio)
+            {
+                var ejercicios = trabajo.Ejercicios
+                    .OrderBy(e => e.Orden)
+                    .Select(e => new ResumenEjercicioDto
+                    {
+                        Nombre = e.Nombre,
+                        Kilos = e.Series
+                            .OrderBy(s => s.Orden)
+                            .Where(s => s.PesoKg is not null)
+                            .Select(s => s.PesoKg!.Value)
+                            .ToList()
+                    })
+                    .Where(e => e.Kilos.Count > 0)
+                    .ToList();
+
+                if (ejercicios.Count == 0)
+                {
+                    return null;
+                }
+
+                return new ResumenTrabajoDto
+                {
+                    Tipo = trabajo.Tipo,
+                    Ejercicios = ejercicios
+                };
+            }
+
+            // Tierra y agua: la mejor marca es el parcial mas rapido.
+            var tiempos = trabajo.Parciales.Select(p => p.Tiempo).ToList();
+            if (tiempos.Count == 0)
+            {
+                return null;
+            }
+
+            return new ResumenTrabajoDto
+            {
+                Tipo = trabajo.Tipo,
+                MejorTiempo = TiempoTexto.Formatear(tiempos.Min())
             };
         }
 

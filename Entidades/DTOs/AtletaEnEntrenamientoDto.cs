@@ -20,6 +20,12 @@ namespace Entidades.DTOs
         /// <summary>Cantidad de trabajos o controles cargados en la sesion.</summary>
         public int CantidadTrabajos { get; set; }
 
+        /// <summary>
+        /// Resumen de cada trabajo cargado, en el orden en que se hicieron, para
+        /// adelantar en la fila lo que hay adentro del modal. Vacio si no hay nada.
+        /// </summary>
+        public List<ResumenTrabajoDto> ResumenTrabajos { get; set; } = [];
+
         /// <summary>Actividad de Garmin del dia, si el nombre coincidio con un amigo.</summary>
         public ActividadGarminDto? Garmin { get; set; }
     }
