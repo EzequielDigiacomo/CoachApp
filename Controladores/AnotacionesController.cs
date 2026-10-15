@@ -4,6 +4,7 @@ using Controladores.Contratos;
 using Entidades;
 using Entidades.DTOs;
 using Entidades.Enums;
+using Controladores.Seguridad;
 using Entidades.Mapeos;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -16,7 +17,7 @@ namespace Controladores
     /// </summary>
     [ApiController]
     [Route("api/[controller]")]
-    [Authorize]
+    [Authorize(Roles = Identidad.RolesStaff)]
     public class AnotacionesController : ControllerBase, IAnotacionesController
     {
         private readonly IAnotacionRepositorio _anotacionRepositorio;

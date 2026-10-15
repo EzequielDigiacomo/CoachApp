@@ -16,6 +16,7 @@ namespace Entidades.Mapeos
             Nombre = usuario.Nombre,
             Apellido = usuario.Apellido,
             Rol = usuario.Rol,
+            AtletaId = usuario.AtletaId,
             Activo = usuario.Activo,
             FechaCreacion = usuario.FechaCreacion,
             UltimoAcceso = usuario.UltimoAcceso

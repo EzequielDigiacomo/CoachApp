@@ -49,6 +49,8 @@ builder.Services.AddScoped<IAtletaRepositorio, AtletaRepositorio>();
 builder.Services.AddScoped<IEntrenamientoRepositorio, EntrenamientoRepositorio>();
 builder.Services.AddScoped<ITrabajoRepositorio, TrabajoRepositorio>();
 builder.Services.AddScoped<IAnotacionRepositorio, AnotacionRepositorio>();
+builder.Services.AddScoped<IAnotacionAtletaRepositorio, AnotacionAtletaRepositorio>();
+builder.Services.AddScoped<ISensacionRepositorio, SensacionRepositorio>();
 builder.Services.AddScoped<ICuentaGarminRepositorio, CuentaGarminRepositorio>();
 builder.Services.AddScoped<PasswordServicio>();
 builder.Services.AddScoped<ITokenServicio, TokenServicio>();

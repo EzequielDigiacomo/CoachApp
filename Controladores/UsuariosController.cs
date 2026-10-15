@@ -54,6 +54,11 @@ namespace Controladores
         [HttpPost]
         public async Task<ActionResult<UsuarioDto>> Crear([FromBody] CrearUsuarioRequest request)
         {
+            if (request.Rol == RolUsuario.Atleta)
+            {
+                return BadRequest(new { mensaje = "Las cuentas de atleta se crean desde el módulo de cuentas." });
+            }
+
             if (await _usuarioRepositorio.ExisteNombreUsuarioAsync(request.NombreUsuario))
             {
                 return Conflict(new { mensaje = "El nombre de usuario ya existe." });

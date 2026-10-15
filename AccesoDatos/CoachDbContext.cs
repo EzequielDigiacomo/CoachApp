@@ -18,6 +18,8 @@ namespace AccesoDatos
         public DbSet<Entrenamiento> Entrenamientos => Set<Entrenamiento>();
         public DbSet<EntrenamientoAtleta> EntrenamientoAtletas => Set<EntrenamientoAtleta>();
         public DbSet<Anotacion> Anotaciones => Set<Anotacion>();
+        public DbSet<AnotacionAtleta> AnotacionesAtleta => Set<AnotacionAtleta>();
+        public DbSet<Sensacion> Sensaciones => Set<Sensacion>();
         public DbSet<Trabajo> Trabajos => Set<Trabajo>();
         public DbSet<TrabajoParcial> TrabajoParciales => Set<TrabajoParcial>();
         public DbSet<TrabajoEjercicio> TrabajoEjercicios => Set<TrabajoEjercicio>();
@@ -42,7 +44,13 @@ namespace AccesoDatos
                 entity.HasKey(u => u.Id);
                 entity.HasIndex(u => u.NombreUsuario).IsUnique();
                 entity.HasIndex(u => u.Email).IsUnique();
+                entity.HasIndex(u => u.AtletaId).IsUnique();
                 entity.Property(u => u.Rol).HasConversion<string>().HasMaxLength(30);
+
+                entity.HasOne(u => u.Atleta)
+                    .WithMany()
+                    .HasForeignKey(u => u.AtletaId)
+                    .OnDelete(DeleteBehavior.Restrict);
             });
 
             modelBuilder.Entity<Atleta>(entity =>
@@ -155,6 +163,32 @@ namespace AccesoDatos
                 entity.HasOne(p => p.Trabajo)
                     .WithMany(t => t.Paladas)
                     .HasForeignKey(p => p.TrabajoId)
+                    .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            modelBuilder.Entity<AnotacionAtleta>(entity =>
+            {
+                entity.ToTable("AnotacionesAtleta");
+                entity.HasKey(a => a.Id);
+                entity.Property(a => a.Texto).HasMaxLength(4000);
+                entity.HasIndex(a => a.FechaCreacion);
+
+                entity.HasOne(a => a.Atleta)
+                    .WithMany()
+                    .HasForeignKey(a => a.AtletaId)
+                    .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            modelBuilder.Entity<Sensacion>(entity =>
+            {
+                entity.ToTable("Sensaciones");
+                entity.HasKey(s => s.Id);
+                entity.Property(s => s.Texto).HasMaxLength(1000);
+                entity.HasIndex(s => s.FechaCreacion);
+
+                entity.HasOne(s => s.Atleta)
+                    .WithMany()
+                    .HasForeignKey(s => s.AtletaId)
                     .OnDelete(DeleteBehavior.Cascade);
             });
 

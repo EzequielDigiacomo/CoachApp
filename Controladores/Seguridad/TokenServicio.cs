@@ -36,6 +36,11 @@ namespace Controladores.Seguridad
                 new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
             };
 
+            if (usuario.AtletaId is int atletaId)
+            {
+                claims.Add(new Claim(Identidad.ClaimAtletaId, atletaId.ToString()));
+            }
+
             var credenciales = new SigningCredentials(
                 new SymmetricSecurityKey(Encoding.UTF8.GetBytes(key)),
                 SecurityAlgorithms.HmacSha256);

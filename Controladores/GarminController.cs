@@ -1,8 +1,11 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
+using AccesoDatos.Repositorios;
 using Controladores.Contratos;
 using Controladores.Integraciones;
+using Controladores.Seguridad;
 using Entidades.DTOs;
+using Entidades.Enums;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -18,10 +21,12 @@ namespace Controladores
     public class GarminController : ControllerBase, IGarminController
     {
         private readonly IGarminServicio _garmin;
+        private readonly IAtletaRepositorio _atletas;
 
-        public GarminController(IGarminServicio garmin)
+        public GarminController(IGarminServicio garmin, IAtletaRepositorio atletas)
         {
             _garmin = garmin;
+            _atletas = atletas;
         }
 
         /// <summary>Dice si el entrenador ya vinculo Garmin.</summary>
@@ -41,6 +46,11 @@ namespace Controladores
         [HttpPost("vincular")]
         public async Task<ActionResult<EstadoGarminDto>> Vincular([FromBody] VincularGarminRequest request)
         {
+            if (Identidad.EsAtleta(User))
+            {
+                return Forbid();
+            }
+
             var usuarioId = UsuarioActualId();
             if (usuarioId is null)
             {
@@ -67,6 +77,11 @@ namespace Controladores
         [HttpDelete]
         public async Task<IActionResult> Desvincular()
         {
+            if (Identidad.EsAtleta(User))
+            {
+                return Forbid();
+            }
+
             var usuarioId = UsuarioActualId();
             if (usuarioId is null)
             {
@@ -90,13 +105,35 @@ namespace Controladores
                 return Unauthorized();
             }
 
+            string? soloNombre = null;
+            string? soloApellido = null;
+            if (Identidad.EsAtleta(User))
+            {
+                var atletaId = Identidad.AtletaId(User);
+                if (atletaId is null)
+                {
+                    return Forbid();
+                }
+
+                var atleta = await _atletas.ObtenerPorIdAsync(atletaId.Value);
+                if (atleta is null)
+                {
+                    return Forbid();
+                }
+
+                soloNombre = atleta.Nombre;
+                soloApellido = atleta.Apellido;
+            }
+
             try
             {
                 var semana = await _garmin.CalendarioAsync(
                     usuarioId.Value,
                     desde ?? DateOnly.FromDateTime(DateTime.Today),
                     mes,
-                    HttpContext.RequestAborted);
+                    HttpContext.RequestAborted,
+                    soloNombre,
+                    soloApellido);
 
                 return Ok(semana);
             }
@@ -113,6 +150,11 @@ namespace Controladores
         [HttpPost("sesiones/{entrenamientoId:int}")]
         public async Task<ActionResult<SincronizacionGarminDto>> Sincronizar(int entrenamientoId)
         {
+            if (Identidad.EsAtleta(User))
+            {
+                return Forbid();
+            }
+
             var usuarioId = UsuarioActualId();
             if (usuarioId is null)
             {

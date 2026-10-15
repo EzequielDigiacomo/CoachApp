@@ -33,5 +33,12 @@ namespace Entidades
         public DateTime FechaCreacion { get; set; } = DateTime.UtcNow;
 
         public DateTime? UltimoAcceso { get; set; }
+
+        /// <summary>
+        /// Atleta dueño de la cuenta. Solo tiene valor cuando el rol es Atleta.
+        /// </summary>
+        public int? AtletaId { get; set; }
+
+        public Atleta? Atleta { get; set; }
     }
 }

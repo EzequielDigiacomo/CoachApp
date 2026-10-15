@@ -25,8 +25,17 @@ namespace AccesoDatos.Repositorios
         public Task<bool> ExisteNombreUsuarioAsync(string nombreUsuario) =>
             _context.Usuarios.AnyAsync(u => u.NombreUsuario == nombreUsuario);
 
+        public Task<bool> ExisteNombreUsuarioAsync(string nombreUsuario, int exceptoId) =>
+            _context.Usuarios.AnyAsync(u => u.NombreUsuario == nombreUsuario && u.Id != exceptoId);
+
         public Task<bool> ExisteEmailAsync(string email) =>
             _context.Usuarios.AnyAsync(u => u.Email == email);
+
+        public Task<bool> ExisteEmailAsync(string email, int exceptoId) =>
+            _context.Usuarios.AnyAsync(u => u.Email == email && u.Id != exceptoId);
+
+        public Task<Usuario?> ObtenerPorAtletaAsync(int atletaId) =>
+            _context.Usuarios.FirstOrDefaultAsync(u => u.AtletaId == atletaId);
 
         public Task<bool> ExisteAlgunSuperAdminAsync() =>
             _context.Usuarios.AnyAsync(u => u.Rol == RolUsuario.SuperAdmin);

@@ -21,7 +21,13 @@ namespace Controladores.Integraciones
 
         Task<SincronizacionGarminDto?> SincronizarAsync(int usuarioId, int entrenamientoId, CancellationToken cancelacion);
 
-        Task<CalendarioGarminDto> CalendarioAsync(int usuarioId, DateOnly desde, bool mes, CancellationToken cancelacion);
+        Task<CalendarioGarminDto> CalendarioAsync(
+            int usuarioId,
+            DateOnly desde,
+            bool mes,
+            CancellationToken cancelacion,
+            string? soloNombre = null,
+            string? soloApellido = null);
     }
 
     /// <summary>
@@ -107,10 +113,22 @@ namespace Controladores.Integraciones
             int usuarioId,
             DateOnly desde,
             bool mes,
-            CancellationToken cancelacion)
+            CancellationToken cancelacion,
+            string? soloNombre = null,
+            string? soloApellido = null)
         {
-            var cuenta = await _cuentas.ObtenerPorUsuarioAsync(usuarioId)
-                ?? throw new GarminExcepcion("Todavía no vinculaste una cuenta de Garmin.");
+            var cuenta = await _cuentas.ObtenerPorUsuarioAsync(usuarioId);
+            if (cuenta is null && soloNombre is not null)
+            {
+                cuenta = await _cuentas.ObtenerAlgunaAsync();
+            }
+
+            if (cuenta is null)
+            {
+                throw new GarminExcepcion(soloNombre is not null
+                    ? "El calendario todavía no está disponible."
+                    : "Todavía no vinculaste una cuenta de Garmin.");
+            }
 
             var inicio = mes ? new DateOnly(desde.Year, desde.Month, 1) : LunesDe(desde);
             var fin = mes ? inicio.AddMonths(1).AddDays(-1) : inicio.AddDays(6);
@@ -163,6 +181,20 @@ namespace Controladores.Integraciones
             amigos = amigos
                 .OrderBy(a => a.NombreCompleto, StringComparer.OrdinalIgnoreCase)
                 .ToList();
+
+            if (soloNombre is not null)
+            {
+                amigos = amigos
+                    .Where(amigo =>
+                    {
+                        var visible = string.IsNullOrWhiteSpace(amigo.NombreCompleto)
+                            ? amigo.DisplayName
+                            : amigo.NombreCompleto;
+                        return NombresGarmin.Coincide(soloNombre, soloApellido, visible)
+                            || NombresGarmin.Coincide(soloNombre, soloApellido, amigo.DisplayName);
+                    })
+                    .ToList();
+            }
 
             var cargados = new Dictionary<string, HashSet<DateOnly>>(StringComparer.OrdinalIgnoreCase);
             var actividadesProhibidas = 0;

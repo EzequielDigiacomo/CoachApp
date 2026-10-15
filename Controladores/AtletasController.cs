@@ -1,6 +1,7 @@
 using AccesoDatos.Repositorios;
 using Controladores.Contratos;
 using Entidades;
+using Controladores.Seguridad;
 using Entidades.DTOs;
 using Entidades.Mapeos;
 using Microsoft.AspNetCore.Authorization;
@@ -33,6 +34,18 @@ namespace Controladores
             [FromQuery] string? busqueda,
             [FromQuery] bool incluirInactivos = false)
         {
+            if (Identidad.EsAtleta(User))
+            {
+                var propio = Identidad.AtletaId(User);
+                if (propio is null)
+                {
+                    return Ok(Array.Empty<AtletaDto>());
+                }
+
+                var propioAtleta = await _atletaRepositorio.ObtenerPorIdAsync(propio.Value);
+                return Ok(propioAtleta is null ? Array.Empty<AtletaDto>() : new[] { propioAtleta.ToDto() });
+            }
+
             var atletas = await _atletaRepositorio.ObtenerTodosAsync(busqueda, incluirInactivos);
             return Ok(atletas.Select(a => a.ToDto()));
         }
@@ -41,6 +54,11 @@ namespace Controladores
         [HttpGet("{id:int}")]
         public async Task<ActionResult<AtletaDto>> ObtenerPorId(int id)
         {
+            if (Ajeno(id) is { } rechazo)
+            {
+                return rechazo;
+            }
+
             var atleta = await _atletaRepositorio.ObtenerPorIdAsync(id);
             if (atleta is null)
             {
@@ -55,7 +73,7 @@ namespace Controladores
         public async Task<ActionResult<AtletaDto>> ObtenerPorDni(string dni)
         {
             var atleta = await _atletaRepositorio.ObtenerPorDniAsync(NormalizarDni(dni));
-            if (atleta is null)
+            if (atleta is null || Ajeno(atleta.Id) is not null)
             {
                 return NotFound(new { mensaje = "Atleta no encontrado." });
             }
@@ -67,6 +85,11 @@ namespace Controladores
         [HttpPost]
         public async Task<ActionResult<AtletaDto>> Crear([FromBody] CrearAtletaRequest request)
         {
+            if (SoloStaff() is { } rechazo)
+            {
+                return rechazo;
+            }
+
             var dni = NormalizarDni(request.Dni);
 
             if (await _atletaRepositorio.ExisteDniAsync(dni))
@@ -96,6 +119,11 @@ namespace Controladores
         [HttpPut("{id:int}")]
         public async Task<ActionResult<AtletaDto>> Actualizar(int id, [FromBody] ActualizarAtletaRequest request)
         {
+            if (SoloStaff() is { } rechazo)
+            {
+                return rechazo;
+            }
+
             var atleta = await _atletaRepositorio.ObtenerPorIdAsync(id);
             if (atleta is null)
             {
@@ -129,6 +157,11 @@ namespace Controladores
         [HttpDelete("{id:int}")]
         public async Task<IActionResult> DarDeBaja(int id)
         {
+            if (SoloStaff() is { } rechazo)
+            {
+                return rechazo;
+            }
+
             var atleta = await _atletaRepositorio.ObtenerPorIdAsync(id);
             if (atleta is null)
             {
@@ -145,6 +178,11 @@ namespace Controladores
         [HttpPatch("{id:int}/estado")]
         public async Task<ActionResult<AtletaDto>> CambiarEstado(int id, [FromBody] ActualizarEstadoAtletaRequest request)
         {
+            if (SoloStaff() is { } rechazo)
+            {
+                return rechazo;
+            }
+
             var atleta = await _atletaRepositorio.ObtenerPorIdAsync(id);
             if (atleta is null)
             {
@@ -163,5 +201,21 @@ namespace Controladores
 
         private static string? Limpiar(string? valor) =>
             string.IsNullOrWhiteSpace(valor) ? null : valor.Trim();
+
+        private ActionResult? SoloStaff() =>
+            Identidad.EsStaff(User) ? null : Forbid();
+
+        /// <summary>El atleta solo puede ver su propia ficha.</summary>
+        private ActionResult? Ajeno(int atletaId)
+        {
+            if (!Identidad.EsAtleta(User))
+            {
+                return null;
+            }
+
+            return Identidad.AtletaId(User) == atletaId
+                ? null
+                : NotFound(new { mensaje = "Atleta no encontrado." });
+        }
     }
 }

@@ -11,6 +11,7 @@ namespace Entidades.DTOs
         public string Nombre { get; set; } = string.Empty;
         public string Apellido { get; set; } = string.Empty;
         public RolUsuario Rol { get; set; }
+        public int? AtletaId { get; set; }
         public bool Activo { get; set; }
         public DateTime FechaCreacion { get; set; }
         public DateTime? UltimoAcceso { get; set; }

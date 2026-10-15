@@ -3,6 +3,7 @@ using Controladores.Contratos;
 using Entidades;
 using Entidades.DTOs;
 using Entidades.Enums;
+using Controladores.Seguridad;
 using Entidades.Mapeos;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -38,6 +39,14 @@ namespace Controladores
         {
             var entrenamientos = await _entrenamientoRepositorio.ObtenerAsync(desde, hasta, turno, sesion);
 
+            if (Identidad.EsAtleta(User))
+            {
+                var propio = Identidad.AtletaId(User);
+                entrenamientos = propio is null
+                    ? []
+                    : entrenamientos.Where(e => e.Atletas.Any(a => a.AtletaId == propio)).ToList();
+            }
+
             // En el listado no hacen falta los atletas de cada sesion.
             var dtos = entrenamientos
                 .Select(e => e.ToDto())
@@ -60,6 +69,17 @@ namespace Controladores
                 return NotFound(new { mensaje = "Entrenamiento no encontrado." });
             }
 
+            if (Identidad.EsAtleta(User))
+            {
+                var propio = Identidad.AtletaId(User);
+                if (propio is null || entrenamiento.Atletas.All(a => a.AtletaId != propio))
+                {
+                    return NotFound(new { mensaje = "Entrenamiento no encontrado." });
+                }
+
+                return Ok(SoloElAtleta(entrenamiento.ToDto(), propio.Value));
+            }
+
             return Ok(entrenamiento.ToDto());
         }
 
@@ -67,6 +87,11 @@ namespace Controladores
         [HttpPost]
         public async Task<ActionResult<EntrenamientoDto>> Crear([FromBody] CrearEntrenamientoRequest request)
         {
+            if (SoloStaff() is { } rechazo)
+            {
+                return rechazo;
+            }
+
             if (await _entrenamientoRepositorio.ExisteSlotAsync(request.Fecha, request.Turno, request.Sesion))
             {
                 return Conflict(new { mensaje = MensajeSlotOcupado });
@@ -103,6 +128,11 @@ namespace Controladores
         [HttpPut("{id:int}")]
         public async Task<ActionResult<EntrenamientoDto>> Actualizar(int id, [FromBody] ActualizarEntrenamientoRequest request)
         {
+            if (SoloStaff() is { } rechazo)
+            {
+                return rechazo;
+            }
+
             var entrenamiento = await _entrenamientoRepositorio.ObtenerPorIdAsync(id);
             if (entrenamiento is null)
             {
@@ -132,6 +162,11 @@ namespace Controladores
         [HttpDelete("{id:int}")]
         public async Task<IActionResult> Eliminar(int id)
         {
+            if (SoloStaff() is { } rechazo)
+            {
+                return rechazo;
+            }
+
             var entrenamiento = await _entrenamientoRepositorio.ObtenerPorIdAsync(id);
             if (entrenamiento is null)
             {
@@ -147,6 +182,11 @@ namespace Controladores
         [HttpPost("{id:int}/atletas")]
         public async Task<ActionResult<EntrenamientoDto>> AgregarAtletas(int id, [FromBody] AsignarAtletasRequest request)
         {
+            if (SoloStaff() is { } rechazo)
+            {
+                return rechazo;
+            }
+
             var entrenamiento = await _entrenamientoRepositorio.ObtenerPorIdAsync(id);
             if (entrenamiento is null)
             {
@@ -176,6 +216,11 @@ namespace Controladores
         [HttpDelete("{id:int}/atletas/{atletaId:int}")]
         public async Task<ActionResult<EntrenamientoDto>> QuitarAtleta(int id, int atletaId)
         {
+            if (SoloStaff() is { } rechazo)
+            {
+                return rechazo;
+            }
+
             var entrenamiento = await _entrenamientoRepositorio.ObtenerPorIdAsync(id);
             if (entrenamiento is null)
             {
@@ -199,6 +244,11 @@ namespace Controladores
         [HttpPatch("{id:int}/asistencia")]
         public async Task<ActionResult<EntrenamientoDto>> MarcarAsistencia(int id, [FromBody] MarcarAsistenciaRequest request)
         {
+            if (SoloStaff() is { } rechazo)
+            {
+                return rechazo;
+            }
+
             var entrenamiento = await _entrenamientoRepositorio.ObtenerPorIdAsync(id);
             if (entrenamiento is null)
             {
@@ -212,8 +262,13 @@ namespace Controladores
             }
 
             var actualizado = await _entrenamientoRepositorio.ObtenerPorIdAsync(id);
+            var dto = actualizado!.ToDto();
+            if (Identidad.EsAtleta(User) && Identidad.AtletaId(User) is int propio)
+            {
+                dto = SoloElAtleta(dto, propio);
+            }
 
-            return Ok(actualizado!.ToDto());
+            return Ok(dto);
         }
 
         /// <summary>
@@ -223,6 +278,11 @@ namespace Controladores
         [HttpGet("/api/atletas/{atletaId:int}/sesiones")]
         public async Task<ActionResult<IEnumerable<SesionHistorialDto>>> HistorialAsistencia(int atletaId)
         {
+            if (Identidad.EsAtleta(User) && Identidad.AtletaId(User) != atletaId)
+            {
+                return Forbid();
+            }
+
             var vinculos = await _entrenamientoRepositorio.ObtenerHistorialAsistenciaAsync(atletaId);
 
             return Ok(vinculos.Select(vinculo => new SesionHistorialDto
@@ -240,5 +300,18 @@ namespace Controladores
 
         private static string? Limpiar(string? valor) =>
             string.IsNullOrWhiteSpace(valor) ? null : valor.Trim();
+
+        private ActionResult? SoloStaff() =>
+            Identidad.EsStaff(User) ? null : Forbid();
+
+        private static EntrenamientoDto SoloElAtleta(EntrenamientoDto dto, int atletaId)
+        {
+            dto.Atletas = dto.Atletas.Where(a => a.AtletaId == atletaId).ToList();
+            dto.CantidadAtletas = dto.Atletas.Count;
+            dto.CantidadPresentes = dto.Atletas.Count(a => a.Asistio == true);
+            dto.CantidadAusentes = dto.Atletas.Count(a => a.Asistio == false);
+            dto.CantidadSinMarcar = dto.Atletas.Count(a => a.Asistio is null);
+            return dto;
+        }
     }
 }

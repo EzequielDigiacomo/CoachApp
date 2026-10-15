@@ -12,7 +12,13 @@ namespace AccesoDatos.Repositorios
 
         Task<bool> ExisteNombreUsuarioAsync(string nombreUsuario);
 
+        Task<bool> ExisteNombreUsuarioAsync(string nombreUsuario, int exceptoId);
+
         Task<bool> ExisteEmailAsync(string email);
+
+        Task<bool> ExisteEmailAsync(string email, int exceptoId);
+
+        Task<Usuario?> ObtenerPorAtletaAsync(int atletaId);
 
         Task<bool> ExisteAlgunSuperAdminAsync();
 

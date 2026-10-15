@@ -15,6 +15,9 @@ namespace AccesoDatos.Repositorios
         public Task<CuentaGarmin?> ObtenerPorUsuarioAsync(int usuarioId) =>
             _context.CuentasGarmin.FirstOrDefaultAsync(c => c.UsuarioId == usuarioId);
 
+        public Task<CuentaGarmin?> ObtenerAlgunaAsync() =>
+            _context.CuentasGarmin.OrderBy(c => c.UsuarioId).FirstOrDefaultAsync();
+
         public async Task GuardarAsync(CuentaGarmin cuenta)
         {
             if (_context.Entry(cuenta).State == EntityState.Detached)

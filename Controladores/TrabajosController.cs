@@ -3,6 +3,7 @@ using Controladores.Contratos;
 using Entidades;
 using Entidades.DTOs;
 using Entidades.Enums;
+using Controladores.Seguridad;
 using Entidades.Mapeos;
 using Entidades.Util;
 using Microsoft.AspNetCore.Authorization;
@@ -30,6 +31,11 @@ namespace Controladores
         [HttpGet]
         public async Task<ActionResult<IEnumerable<TrabajoDto>>> Listar(int entrenamientoId, int atletaId)
         {
+            if (Ajeno(atletaId) is { } rechazo)
+            {
+                return rechazo;
+            }
+
             if (!await _trabajoRepositorio.ExisteVinculoAsync(entrenamientoId, atletaId))
             {
                 return NotFound(new { mensaje = "El atleta no está asignado a esa sesión." });
@@ -44,6 +50,11 @@ namespace Controladores
         [HttpPost]
         public async Task<ActionResult<TrabajoDto>> Crear(int entrenamientoId, int atletaId, [FromBody] GuardarTrabajoRequest request)
         {
+            if (Ajeno(atletaId) is { } rechazo)
+            {
+                return rechazo;
+            }
+
             if (!await _trabajoRepositorio.ExisteVinculoAsync(entrenamientoId, atletaId))
             {
                 return NotFound(new { mensaje = "El atleta no está asignado a esa sesión." });
@@ -79,6 +90,11 @@ namespace Controladores
             int trabajoId,
             [FromBody] GuardarTrabajoRequest request)
         {
+            if (Ajeno(atletaId) is { } rechazo)
+            {
+                return rechazo;
+            }
+
             var trabajo = await _trabajoRepositorio.ObtenerPorIdAsync(trabajoId);
             if (trabajo is null || trabajo.EntrenamientoId != entrenamientoId || trabajo.AtletaId != atletaId)
             {
@@ -104,6 +120,11 @@ namespace Controladores
         [HttpDelete("{trabajoId:int}")]
         public async Task<IActionResult> Eliminar(int entrenamientoId, int atletaId, int trabajoId)
         {
+            if (Ajeno(atletaId) is { } rechazo)
+            {
+                return rechazo;
+            }
+
             var trabajo = await _trabajoRepositorio.ObtenerPorIdAsync(trabajoId);
             if (trabajo is null || trabajo.EntrenamientoId != entrenamientoId || trabajo.AtletaId != atletaId)
             {
@@ -122,6 +143,11 @@ namespace Controladores
         [HttpGet("/api/atletas/{atletaId:int}/trabajos")]
         public async Task<ActionResult<IEnumerable<TrabajoDto>>> HistorialPorAtleta(int atletaId)
         {
+            if (Ajeno(atletaId) is { } rechazo)
+            {
+                return rechazo;
+            }
+
             var trabajos = await _trabajoRepositorio.ObtenerHistorialAsync(atletaId);
 
             return Ok(trabajos.Select(t => t.ToDto()));
@@ -131,6 +157,16 @@ namespace Controladores
         /// Los parciales solo aplican a tierra y agua. Si el trabajo es de
         /// gimnasio se ignoran, para que no queden datos mezclados.
         /// </summary>
+        private ActionResult? Ajeno(int atletaId)
+        {
+            if (!Identidad.EsAtleta(User))
+            {
+                return null;
+            }
+
+            return Identidad.AtletaId(User) == atletaId ? null : Forbid();
+        }
+
         private static IEnumerable<TrabajoParcial> ArmarParciales(GuardarTrabajoRequest request)
         {
             if (request.Tipo == TipoTrabajo.Gimnasio)

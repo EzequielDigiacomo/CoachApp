@@ -110,6 +110,34 @@ namespace AccesoDatos.Migraciones
                     b.ToTable("Anotaciones", (string)null);
                 });
 
+            modelBuilder.Entity("Entidades.AnotacionAtleta", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("AtletaId")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("FechaCreacion")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Texto")
+                        .IsRequired()
+                        .HasMaxLength(4000)
+                        .HasColumnType("character varying(4000)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AtletaId");
+
+                    b.HasIndex("FechaCreacion");
+
+                    b.ToTable("AnotacionesAtleta", (string)null);
+                });
+
             modelBuilder.Entity("Entidades.Atleta", b =>
                 {
                     b.Property<int>("Id")
@@ -285,6 +313,34 @@ namespace AccesoDatos.Migraciones
                     b.ToTable("EntrenamientoAtletas", (string)null);
                 });
 
+            modelBuilder.Entity("Entidades.Sensacion", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("AtletaId")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("FechaCreacion")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Texto")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AtletaId");
+
+                    b.HasIndex("FechaCreacion");
+
+                    b.ToTable("Sensaciones", (string)null);
+                });
+
             modelBuilder.Entity("Entidades.Trabajo", b =>
                 {
                     b.Property<int>("Id")
@@ -451,6 +507,9 @@ namespace AccesoDatos.Migraciones
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
 
+                    b.Property<int?>("AtletaId")
+                        .HasColumnType("integer");
+
                     b.Property<string>("Email")
                         .IsRequired()
                         .HasMaxLength(150)
@@ -483,6 +542,9 @@ namespace AccesoDatos.Migraciones
 
                     b.HasKey("Id");
 
+                    b.HasIndex("AtletaId")
+                        .IsUnique();
+
                     b.HasIndex("Email")
                         .IsUnique();
 
@@ -508,7 +570,7 @@ namespace AccesoDatos.Migraciones
 
                     b.HasKey("Id");
 
-                    b.ToTable("DataProtectionKeys", (string)null);
+                    b.ToTable("DataProtectionKeys");
                 });
 
             modelBuilder.Entity("Entidades.Anotacion", b =>
@@ -542,6 +604,17 @@ namespace AccesoDatos.Migraciones
                     b.Navigation("Usuario");
                 });
 
+            modelBuilder.Entity("Entidades.AnotacionAtleta", b =>
+                {
+                    b.HasOne("Entidades.Atleta", "Atleta")
+                        .WithMany()
+                        .HasForeignKey("AtletaId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Atleta");
+                });
+
             modelBuilder.Entity("Entidades.CuentaGarmin", b =>
                 {
                     b.HasOne("Entidades.Usuario", "Usuario")
@@ -570,6 +643,17 @@ namespace AccesoDatos.Migraciones
                     b.Navigation("Atleta");
 
                     b.Navigation("Entrenamiento");
+                });
+
+            modelBuilder.Entity("Entidades.Sensacion", b =>
+                {
+                    b.HasOne("Entidades.Atleta", "Atleta")
+                        .WithMany()
+                        .HasForeignKey("AtletaId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Atleta");
                 });
 
             modelBuilder.Entity("Entidades.Trabajo", b =>
@@ -625,6 +709,16 @@ namespace AccesoDatos.Migraciones
                         .IsRequired();
 
                     b.Navigation("TrabajoEjercicio");
+                });
+
+            modelBuilder.Entity("Entidades.Usuario", b =>
+                {
+                    b.HasOne("Entidades.Atleta", "Atleta")
+                        .WithMany()
+                        .HasForeignKey("AtletaId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("Atleta");
                 });
 
             modelBuilder.Entity("Entidades.Atleta", b =>

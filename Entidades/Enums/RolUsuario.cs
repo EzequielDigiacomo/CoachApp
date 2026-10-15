@@ -6,6 +6,7 @@ namespace Entidades.Enums
     public enum RolUsuario
     {
         SuperAdmin = 1,
-        Entrenador = 2
+        Entrenador = 2,
+        Atleta = 3
     }
 }
