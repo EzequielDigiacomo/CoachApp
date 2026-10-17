@@ -68,6 +68,16 @@ namespace AccesoDatos.Repositorios
                     .ThenInclude(ea => ea.Trabajos)
                         .ThenInclude(t => t.Ejercicios)
                             .ThenInclude(e => e.Series)
+                .Include(e => e.Equipos)
+                    .ThenInclude(eq => eq.Miembros)
+                        .ThenInclude(m => m.Atleta)
+                .Include(e => e.Equipos)
+                    .ThenInclude(eq => eq.Trabajos)
+                        .ThenInclude(t => t.Parciales)
+                .Include(e => e.Equipos)
+                    .ThenInclude(eq => eq.Trabajos)
+                        .ThenInclude(t => t.Ejercicios)
+                            .ThenInclude(ej => ej.Series)
                 .FirstOrDefaultAsync(e => e.Id == id);
 
         public Task<bool> ExisteSlotAsync(DateOnly fecha, Turno turno, int sesion, int? excluirId = null) =>

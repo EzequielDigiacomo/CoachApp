@@ -28,6 +28,9 @@ namespace Entidades
         /// <summary>Atletas que participan de la sesion (relacion N:N).</summary>
         public ICollection<EntrenamientoAtleta> Atletas { get; set; } = new List<EntrenamientoAtleta>();
 
+        /// <summary>Botes de equipo cargados en la sesion.</summary>
+        public ICollection<EntrenamientoEquipo> Equipos { get; set; } = new List<EntrenamientoEquipo>();
+
         /// <summary>Anotaciones asociadas a la sesion de entrenamiento.</summary>
         public ICollection<Anotacion> Anotaciones { get; set; } = new List<Anotacion>();
     }

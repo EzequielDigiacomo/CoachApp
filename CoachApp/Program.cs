@@ -48,6 +48,8 @@ builder.Services.AddScoped<IUsuarioRepositorio, UsuarioRepositorio>();
 builder.Services.AddScoped<IAtletaRepositorio, AtletaRepositorio>();
 builder.Services.AddScoped<IEntrenamientoRepositorio, EntrenamientoRepositorio>();
 builder.Services.AddScoped<ITrabajoRepositorio, TrabajoRepositorio>();
+builder.Services.AddScoped<IEquipoRepositorio, EquipoRepositorio>();
+builder.Services.AddScoped<IEntrenamientoEquipoRepositorio, EntrenamientoEquipoRepositorio>();
 builder.Services.AddScoped<IAnotacionRepositorio, AnotacionRepositorio>();
 builder.Services.AddScoped<IAnotacionAtletaRepositorio, AnotacionAtletaRepositorio>();
 builder.Services.AddScoped<ISensacionRepositorio, SensacionRepositorio>();

@@ -32,7 +32,38 @@ namespace Entidades.Mapeos
                 CantidadPresentes = atletas.Count(a => a.Asistio == true),
                 CantidadAusentes = atletas.Count(a => a.Asistio == false),
                 CantidadSinMarcar = atletas.Count(a => a.Asistio == null),
-                Atletas = atletas
+                Atletas = atletas,
+                Equipos = entrenamiento.Equipos
+                    .Select(ToDto)
+                    .OrderBy(e => e.Etiqueta)
+                    .ToList()
+            };
+        }
+
+        public static EquipoEnEntrenamientoDto ToDto(this EntrenamientoEquipo equipo)
+        {
+            var miembros = equipo.Miembros
+                .OrderBy(m => m.Orden)
+                .Select(m => new EquipoMiembroDto
+                {
+                    AtletaId = m.AtletaId,
+                    Nombre = m.Atleta.Nombre,
+                    Apellido = m.Atleta.Apellido,
+                    Orden = m.Orden
+                })
+                .ToList();
+
+            return new EquipoEnEntrenamientoDto
+            {
+                Id = equipo.Id,
+                Tipo = equipo.Tipo,
+                EquipoId = equipo.EquipoId,
+                Etiqueta = NombresBote.Etiqueta(
+                    equipo.Tipo,
+                    miembros.Select(m => (m.Nombre, m.Apellido))),
+                Miembros = miembros,
+                CantidadTrabajos = equipo.Trabajos.Count,
+                ResumenTrabajos = ResumenDe(equipo.Trabajos)
             };
         }
 

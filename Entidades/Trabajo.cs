@@ -13,13 +13,21 @@ namespace Entidades
         public int Id { get; set; }
 
         public int EntrenamientoId { get; set; }
-        public int AtletaId { get; set; }
+
+        /// <summary>
+        /// Atleta dueño del trabajo individual. Null cuando el trabajo es de un bote.
+        /// </summary>
+        public int? AtletaId { get; set; }
 
         /// <summary>
         /// El trabajo cuelga del atleta dentro de la sesion, asi que solo existe
         /// si el atleta esta asignado a ese entrenamiento.
         /// </summary>
-        public EntrenamientoAtleta EntrenamientoAtleta { get; set; } = null!;
+        public EntrenamientoAtleta? EntrenamientoAtleta { get; set; }
+
+        /// <summary>Bote de equipo dueño del trabajo de agua compartido.</summary>
+        public int? EntrenamientoEquipoId { get; set; }
+        public EntrenamientoEquipo? EntrenamientoEquipo { get; set; }
 
         /// <summary>Lugar donde se hizo el trabajo: gimnasio, tierra o agua.</summary>
         public TipoTrabajo Tipo { get; set; }

@@ -12,7 +12,9 @@ namespace Entidades.DTOs
 
         public int EntrenamientoId { get; set; }
 
-        public int AtletaId { get; set; }
+        public int? AtletaId { get; set; }
+
+        public int? EntrenamientoEquipoId { get; set; }
 
         /// <summary>Lugar donde se hizo el trabajo: gimnasio, tierra o agua.</summary>
         public TipoTrabajo Tipo { get; set; }

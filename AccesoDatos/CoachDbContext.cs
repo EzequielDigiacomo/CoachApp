@@ -17,6 +17,10 @@ namespace AccesoDatos
         public DbSet<Atleta> Atletas => Set<Atleta>();
         public DbSet<Entrenamiento> Entrenamientos => Set<Entrenamiento>();
         public DbSet<EntrenamientoAtleta> EntrenamientoAtletas => Set<EntrenamientoAtleta>();
+        public DbSet<Equipo> Equipos => Set<Equipo>();
+        public DbSet<EquipoMiembro> EquipoMiembros => Set<EquipoMiembro>();
+        public DbSet<EntrenamientoEquipo> EntrenamientoEquipos => Set<EntrenamientoEquipo>();
+        public DbSet<EntrenamientoEquipoMiembro> EntrenamientoEquipoMiembros => Set<EntrenamientoEquipoMiembro>();
         public DbSet<Anotacion> Anotaciones => Set<Anotacion>();
         public DbSet<AnotacionAtleta> AnotacionesAtleta => Set<AnotacionAtleta>();
         public DbSet<Sensacion> Sensaciones => Set<Sensacion>();
@@ -102,18 +106,85 @@ namespace AccesoDatos
                     .OnDelete(DeleteBehavior.Cascade);
             });
 
+            modelBuilder.Entity<Equipo>(entity =>
+            {
+                entity.ToTable("Equipos");
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Tipo).HasConversion<string>().HasMaxLength(10);
+            });
+
+            modelBuilder.Entity<EquipoMiembro>(entity =>
+            {
+                entity.ToTable("EquipoMiembros");
+                entity.HasKey(m => new { m.EquipoId, m.AtletaId });
+                entity.HasIndex(m => new { m.EquipoId, m.Orden }).IsUnique();
+
+                entity.HasOne(m => m.Equipo)
+                    .WithMany(e => e.Miembros)
+                    .HasForeignKey(m => m.EquipoId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(m => m.Atleta)
+                    .WithMany()
+                    .HasForeignKey(m => m.AtletaId)
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            modelBuilder.Entity<EntrenamientoEquipo>(entity =>
+            {
+                entity.ToTable("EntrenamientoEquipos");
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Tipo).HasConversion<string>().HasMaxLength(10);
+                entity.HasIndex(e => e.EntrenamientoId);
+
+                entity.HasOne(e => e.Entrenamiento)
+                    .WithMany(en => en.Equipos)
+                    .HasForeignKey(e => e.EntrenamientoId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(e => e.Equipo)
+                    .WithMany()
+                    .HasForeignKey(e => e.EquipoId)
+                    .OnDelete(DeleteBehavior.SetNull);
+            });
+
+            modelBuilder.Entity<EntrenamientoEquipoMiembro>(entity =>
+            {
+                entity.ToTable("EntrenamientoEquipoMiembros");
+                entity.HasKey(m => new { m.EntrenamientoEquipoId, m.AtletaId });
+                entity.HasIndex(m => new { m.EntrenamientoEquipoId, m.Orden }).IsUnique();
+
+                entity.HasOne(m => m.EntrenamientoEquipo)
+                    .WithMany(e => e.Miembros)
+                    .HasForeignKey(m => m.EntrenamientoEquipoId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(m => m.Atleta)
+                    .WithMany()
+                    .HasForeignKey(m => m.AtletaId)
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
+
             modelBuilder.Entity<Trabajo>(entity =>
             {
                 entity.ToTable("Trabajos");
                 entity.HasKey(t => t.Id);
                 entity.Property(t => t.Tipo).HasConversion<string>().HasMaxLength(20);
                 entity.HasIndex(t => new { t.EntrenamientoId, t.AtletaId });
+                entity.HasIndex(t => t.EntrenamientoEquipoId);
 
-                // Se apoya en la clave compuesta del vinculo: un trabajo solo
-                // existe si el atleta esta asignado a esa sesion.
+                // Trabajo individual: cuelga del vinculo atleta-sesion.
+                // Si AtletaId es null (bote), la FK compuesta no se valida.
                 entity.HasOne(t => t.EntrenamientoAtleta)
                     .WithMany(ea => ea.Trabajos)
                     .HasForeignKey(t => new { t.EntrenamientoId, t.AtletaId })
+                    .IsRequired(false)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(t => t.EntrenamientoEquipo)
+                    .WithMany(ee => ee.Trabajos)
+                    .HasForeignKey(t => t.EntrenamientoEquipoId)
+                    .IsRequired(false)
                     .OnDelete(DeleteBehavior.Cascade);
             });
 

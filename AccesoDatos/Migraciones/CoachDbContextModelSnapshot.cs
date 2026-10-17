@@ -313,6 +313,103 @@ namespace AccesoDatos.Migraciones
                     b.ToTable("EntrenamientoAtletas", (string)null);
                 });
 
+            modelBuilder.Entity("Entidades.EntrenamientoEquipo", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("EntrenamientoId")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("EquipoId")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("FechaCreacion")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Tipo")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EntrenamientoId");
+
+                    b.HasIndex("EquipoId");
+
+                    b.ToTable("EntrenamientoEquipos", (string)null);
+                });
+
+            modelBuilder.Entity("Entidades.EntrenamientoEquipoMiembro", b =>
+                {
+                    b.Property<int>("EntrenamientoEquipoId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("AtletaId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Orden")
+                        .HasColumnType("integer");
+
+                    b.HasKey("EntrenamientoEquipoId", "AtletaId");
+
+                    b.HasIndex("AtletaId");
+
+                    b.HasIndex("EntrenamientoEquipoId", "Orden")
+                        .IsUnique();
+
+                    b.ToTable("EntrenamientoEquipoMiembros", (string)null);
+                });
+
+            modelBuilder.Entity("Entidades.Equipo", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<bool>("Activo")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime>("FechaCreacion")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Tipo")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Equipos", (string)null);
+                });
+
+            modelBuilder.Entity("Entidades.EquipoMiembro", b =>
+                {
+                    b.Property<int>("EquipoId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("AtletaId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Orden")
+                        .HasColumnType("integer");
+
+                    b.HasKey("EquipoId", "AtletaId");
+
+                    b.HasIndex("AtletaId");
+
+                    b.HasIndex("EquipoId", "Orden")
+                        .IsUnique();
+
+                    b.ToTable("EquipoMiembros", (string)null);
+                });
+
             modelBuilder.Entity("Entidades.Sensacion", b =>
                 {
                     b.Property<int>("Id")
@@ -349,7 +446,10 @@ namespace AccesoDatos.Migraciones
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
-                    b.Property<int>("AtletaId")
+                    b.Property<int?>("AtletaId")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("EntrenamientoEquipoId")
                         .HasColumnType("integer");
 
                     b.Property<int>("EntrenamientoId")
@@ -374,6 +474,8 @@ namespace AccesoDatos.Migraciones
                         .HasColumnType("character varying(20)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("EntrenamientoEquipoId");
 
                     b.HasIndex("EntrenamientoId", "AtletaId");
 
@@ -645,6 +747,62 @@ namespace AccesoDatos.Migraciones
                     b.Navigation("Entrenamiento");
                 });
 
+            modelBuilder.Entity("Entidades.EntrenamientoEquipo", b =>
+                {
+                    b.HasOne("Entidades.Entrenamiento", "Entrenamiento")
+                        .WithMany("Equipos")
+                        .HasForeignKey("EntrenamientoId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Entidades.Equipo", "Equipo")
+                        .WithMany()
+                        .HasForeignKey("EquipoId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("Entrenamiento");
+
+                    b.Navigation("Equipo");
+                });
+
+            modelBuilder.Entity("Entidades.EntrenamientoEquipoMiembro", b =>
+                {
+                    b.HasOne("Entidades.Atleta", "Atleta")
+                        .WithMany()
+                        .HasForeignKey("AtletaId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Entidades.EntrenamientoEquipo", "EntrenamientoEquipo")
+                        .WithMany("Miembros")
+                        .HasForeignKey("EntrenamientoEquipoId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Atleta");
+
+                    b.Navigation("EntrenamientoEquipo");
+                });
+
+            modelBuilder.Entity("Entidades.EquipoMiembro", b =>
+                {
+                    b.HasOne("Entidades.Atleta", "Atleta")
+                        .WithMany()
+                        .HasForeignKey("AtletaId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Entidades.Equipo", "Equipo")
+                        .WithMany("Miembros")
+                        .HasForeignKey("EquipoId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Atleta");
+
+                    b.Navigation("Equipo");
+                });
+
             modelBuilder.Entity("Entidades.Sensacion", b =>
                 {
                     b.HasOne("Entidades.Atleta", "Atleta")
@@ -658,13 +816,19 @@ namespace AccesoDatos.Migraciones
 
             modelBuilder.Entity("Entidades.Trabajo", b =>
                 {
+                    b.HasOne("Entidades.EntrenamientoEquipo", "EntrenamientoEquipo")
+                        .WithMany("Trabajos")
+                        .HasForeignKey("EntrenamientoEquipoId")
+                        .OnDelete(DeleteBehavior.Cascade);
+
                     b.HasOne("Entidades.EntrenamientoAtleta", "EntrenamientoAtleta")
                         .WithMany("Trabajos")
                         .HasForeignKey("EntrenamientoId", "AtletaId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Cascade);
 
                     b.Navigation("EntrenamientoAtleta");
+
+                    b.Navigation("EntrenamientoEquipo");
                 });
 
             modelBuilder.Entity("Entidades.TrabajoEjercicio", b =>
@@ -733,11 +897,25 @@ namespace AccesoDatos.Migraciones
                     b.Navigation("Anotaciones");
 
                     b.Navigation("Atletas");
+
+                    b.Navigation("Equipos");
                 });
 
             modelBuilder.Entity("Entidades.EntrenamientoAtleta", b =>
                 {
                     b.Navigation("Trabajos");
+                });
+
+            modelBuilder.Entity("Entidades.EntrenamientoEquipo", b =>
+                {
+                    b.Navigation("Miembros");
+
+                    b.Navigation("Trabajos");
+                });
+
+            modelBuilder.Entity("Entidades.Equipo", b =>
+                {
+                    b.Navigation("Miembros");
                 });
 
             modelBuilder.Entity("Entidades.Trabajo", b =>

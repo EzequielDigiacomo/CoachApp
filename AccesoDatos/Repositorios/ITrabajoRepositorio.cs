@@ -7,6 +7,8 @@ namespace AccesoDatos.Repositorios
         /// <summary>Trabajos del atleta en esa sesion, con sus parciales, ejercicios y paladas.</summary>
         Task<List<Trabajo>> ObtenerPorAtletaAsync(int entrenamientoId, int atletaId);
 
+        Task<List<Trabajo>> ObtenerPorEquipoAsync(int entrenamientoEquipoId);
+
         /// <summary>
         /// Todos los trabajos del atleta a lo largo de sus sesiones, del mas
         /// nuevo al mas viejo. Es la base del historial por atleta.

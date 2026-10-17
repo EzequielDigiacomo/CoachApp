@@ -311,6 +311,9 @@ namespace Controladores
             dto.CantidadPresentes = dto.Atletas.Count(a => a.Asistio == true);
             dto.CantidadAusentes = dto.Atletas.Count(a => a.Asistio == false);
             dto.CantidadSinMarcar = dto.Atletas.Count(a => a.Asistio is null);
+            dto.Equipos = dto.Equipos
+                .Where(e => e.Miembros.Any(m => m.AtletaId == atletaId))
+                .ToList();
             return dto;
         }
     }

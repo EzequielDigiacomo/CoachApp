@@ -19,6 +19,13 @@ namespace AccesoDatos.Repositorios
                 .ThenBy(t => t.Id)
                 .ToListAsync();
 
+        public Task<List<Trabajo>> ObtenerPorEquipoAsync(int entrenamientoEquipoId) =>
+            ConDetalle(_context.Trabajos
+                .Where(t => t.EntrenamientoEquipoId == entrenamientoEquipoId))
+                .OrderBy(t => t.HoraInicio)
+                .ThenBy(t => t.Id)
+                .ToListAsync();
+
         public Task<Trabajo?> ObtenerPorIdAsync(int trabajoId) =>
             ConDetalle(_context.Trabajos.Where(t => t.Id == trabajoId))
                 .FirstOrDefaultAsync();
@@ -26,9 +33,9 @@ namespace AccesoDatos.Repositorios
         public Task<List<Trabajo>> ObtenerHistorialAsync(int atletaId) =>
             ConDetalle(_context.Trabajos.Where(t => t.AtletaId == atletaId))
                 // Las sesiones, de la mas nueva a la mas vieja.
-                .OrderByDescending(t => t.EntrenamientoAtleta.Entrenamiento.Fecha)
-                .ThenByDescending(t => t.EntrenamientoAtleta.Entrenamiento.Turno)
-                .ThenByDescending(t => t.EntrenamientoAtleta.Entrenamiento.Sesion)
+                .OrderByDescending(t => t.EntrenamientoAtleta!.Entrenamiento.Fecha)
+                .ThenByDescending(t => t.EntrenamientoAtleta!.Entrenamiento.Turno)
+                .ThenByDescending(t => t.EntrenamientoAtleta!.Entrenamiento.Sesion)
                 // Dentro de la sesion, los trabajos en el orden en que se hicieron.
                 .ThenBy(t => t.HoraInicio)
                 .ThenBy(t => t.Id)

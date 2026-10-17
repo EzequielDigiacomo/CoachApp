@@ -86,6 +86,7 @@ namespace Entidades.Mapeos
                 Id = trabajo.Id,
                 EntrenamientoId = trabajo.EntrenamientoId,
                 AtletaId = trabajo.AtletaId,
+                EntrenamientoEquipoId = trabajo.EntrenamientoEquipoId,
                 Tipo = trabajo.Tipo,
                 HoraInicio = trabajo.HoraInicio is null ? null : TiempoTexto.FormatearHora(trabajo.HoraInicio.Value),
                 Observaciones = trabajo.Observaciones,

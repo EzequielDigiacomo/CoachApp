@@ -26,5 +26,8 @@ namespace Entidades.DTOs
         /// en el detalle viene completo.
         /// </summary>
         public List<AtletaEnEntrenamientoDto> Atletas { get; set; } = [];
+
+        /// <summary>Botes de equipo de la sesion. Vacio en el listado.</summary>
+        public List<EquipoEnEntrenamientoDto> Equipos { get; set; } = [];
     }
 }
