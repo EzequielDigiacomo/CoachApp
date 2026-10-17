@@ -21,17 +21,19 @@ namespace Controladores
     public class TrabajosController : ControllerBase, ITrabajosController
     {
         private readonly ITrabajoRepositorio _trabajoRepositorio;
+        private readonly IUsuarioRepositorio _usuarioRepositorio;
 
-        public TrabajosController(ITrabajoRepositorio trabajoRepositorio)
+        public TrabajosController(ITrabajoRepositorio trabajoRepositorio, IUsuarioRepositorio usuarioRepositorio)
         {
             _trabajoRepositorio = trabajoRepositorio;
+            _usuarioRepositorio = usuarioRepositorio;
         }
 
         /// <summary>Lista los trabajos del atleta en esa sesion, del mas temprano al mas tarde.</summary>
         [HttpGet]
         public async Task<ActionResult<IEnumerable<TrabajoDto>>> Listar(int entrenamientoId, int atletaId)
         {
-            if (Ajeno(atletaId) is { } rechazo)
+            if (await Ajeno(atletaId) is { } rechazo)
             {
                 return rechazo;
             }
@@ -56,7 +58,7 @@ namespace Controladores
         [HttpPost]
         public async Task<ActionResult<TrabajoDto>> Crear(int entrenamientoId, int atletaId, [FromBody] GuardarTrabajoRequest request)
         {
-            if (Ajeno(atletaId) is { } rechazo)
+            if (await Ajeno(atletaId) is { } rechazo)
             {
                 return rechazo;
             }
@@ -96,7 +98,7 @@ namespace Controladores
             int trabajoId,
             [FromBody] GuardarTrabajoRequest request)
         {
-            if (Ajeno(atletaId) is { } rechazo)
+            if (await Ajeno(atletaId) is { } rechazo)
             {
                 return rechazo;
             }
@@ -126,7 +128,7 @@ namespace Controladores
         [HttpDelete("{trabajoId:int}")]
         public async Task<IActionResult> Eliminar(int entrenamientoId, int atletaId, int trabajoId)
         {
-            if (Ajeno(atletaId) is { } rechazo)
+            if (await Ajeno(atletaId) is { } rechazo)
             {
                 return rechazo;
             }
@@ -149,7 +151,7 @@ namespace Controladores
         [HttpGet("/api/atletas/{atletaId:int}/trabajos")]
         public async Task<ActionResult<IEnumerable<TrabajoDto>>> HistorialPorAtleta(int atletaId)
         {
-            if (Ajeno(atletaId) is { } rechazo)
+            if (await Ajeno(atletaId) is { } rechazo)
             {
                 return rechazo;
             }
@@ -160,17 +162,30 @@ namespace Controladores
         }
 
         /// <summary>
-        /// Los parciales solo aplican a tierra y agua. Si el trabajo es de
-        /// gimnasio se ignoran, para que no queden datos mezclados.
+        /// Un atleta solo puede tocar sus propios trabajos. Si el token no
+        /// trae el claim, se confirma contra el usuario en la base.
         /// </summary>
-        private ActionResult? Ajeno(int atletaId)
+        private async Task<ActionResult?> Ajeno(int atletaId)
         {
             if (!Identidad.EsAtleta(User))
             {
                 return null;
             }
 
-            return Identidad.AtletaId(User) == atletaId ? null : Forbid();
+            var propio = Identidad.AtletaId(User);
+            if (propio is null)
+            {
+                var usuarioId = Identidad.UsuarioId(User);
+                if (usuarioId is int id)
+                {
+                    var usuario = await _usuarioRepositorio.ObtenerPorIdAsync(id);
+                    propio = usuario?.AtletaId;
+                }
+            }
+
+            return propio == atletaId
+                ? null
+                : StatusCode(403, new { mensaje = "No podés ver los trabajos de otro atleta." });
         }
 
         private static IEnumerable<TrabajoParcial> ArmarParciales(GuardarTrabajoRequest request)

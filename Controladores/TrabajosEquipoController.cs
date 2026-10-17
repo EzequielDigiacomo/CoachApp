@@ -18,11 +18,16 @@ namespace Controladores
     {
         private readonly ITrabajoRepositorio _trabajos;
         private readonly IEntrenamientoEquipoRepositorio _equipos;
+        private readonly IUsuarioRepositorio _usuarios;
 
-        public TrabajosEquipoController(ITrabajoRepositorio trabajos, IEntrenamientoEquipoRepositorio equipos)
+        public TrabajosEquipoController(
+            ITrabajoRepositorio trabajos,
+            IEntrenamientoEquipoRepositorio equipos,
+            IUsuarioRepositorio usuarios)
         {
             _trabajos = trabajos;
             _equipos = equipos;
+            _usuarios = usuarios;
         }
 
         [HttpGet]
@@ -167,9 +172,23 @@ namespace Controladores
             }
 
             var atletaId = Identidad.AtletaId(User);
+            if (atletaId is null && Identidad.EsAtleta(User))
+            {
+                // Token viejo sin claim: se lee del usuario en la base.
+                var usuarioId = Identidad.UsuarioId(User);
+                if (usuarioId is int id)
+                {
+                    var usuario = await _usuarios.ObtenerPorIdAsync(id);
+                    atletaId = usuario?.AtletaId;
+                }
+            }
+
             if (atletaId is null || !await _equipos.EsMiembroAsync(entrenamientoEquipoId, atletaId.Value))
             {
-                return Forbid();
+                return StatusCode(403, new
+                {
+                    mensaje = "No podés ver los trabajos de este bote."
+                });
             }
 
             return null;
