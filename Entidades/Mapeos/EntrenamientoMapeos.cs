@@ -13,8 +13,20 @@ namespace Entidades.Mapeos
         /// </summary>
         public static EntrenamientoDto ToDto(this Entrenamiento entrenamiento)
         {
+            // Los tiempos de K2/K4 cuentan para cada remero del bote.
+            var trabajosDeEquipo = entrenamiento.Equipos
+                .SelectMany(equipo => equipo.Miembros.Select(miembro => (miembro.AtletaId, equipo.Trabajos)))
+                .GroupBy(x => x.AtletaId)
+                .ToDictionary(
+                    g => g.Key,
+                    g => (IReadOnlyList<Trabajo>)g.SelectMany(x => x.Trabajos).ToList());
+
             var atletas = entrenamiento.Atletas
-                .Select(ToDto)
+                .Select(vinculo =>
+                {
+                    trabajosDeEquipo.TryGetValue(vinculo.AtletaId, out var deBote);
+                    return ToDto(vinculo, deBote);
+                })
                 .OrderBy(a => a.Apellido)
                 .ThenBy(a => a.Nombre)
                 .ToList();
@@ -68,9 +80,14 @@ namespace Entidades.Mapeos
         }
 
         /// <summary>Arma el atleta con su asistencia dentro de la sesion.</summary>
-        public static AtletaEnEntrenamientoDto ToDto(this EntrenamientoAtleta vinculo)
+        public static AtletaEnEntrenamientoDto ToDto(
+            this EntrenamientoAtleta vinculo,
+            IReadOnlyList<Trabajo>? trabajosDeEquipo = null)
         {
             var edad = AtletaMapeos.CalcularEdad(vinculo.Atleta.FechaNacimiento);
+            var trabajos = trabajosDeEquipo is { Count: > 0 }
+                ? vinculo.Trabajos.Concat(trabajosDeEquipo).ToList()
+                : vinculo.Trabajos.ToList();
 
             return new AtletaEnEntrenamientoDto
             {
@@ -81,8 +98,8 @@ namespace Entidades.Mapeos
                 Edad = edad,
                 Categorias = CategoriasAtleta.Nombres(vinculo.Atleta.FechaNacimiento),
                 Asistio = vinculo.Asistio,
-                CantidadTrabajos = vinculo.Trabajos.Count,
-                ResumenTrabajos = ResumenDe(vinculo.Trabajos),
+                CantidadTrabajos = trabajos.Count,
+                ResumenTrabajos = ResumenDe(trabajos),
                 Garmin = ActividadDe(vinculo)
             };
         }
