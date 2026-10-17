@@ -101,7 +101,7 @@ namespace Entidades.Mapeos
 
         /// <summary>
         /// Arma el resumen de un trabajo. En gimnasio son los kg de cada ejercicio
-        /// y en tierra y agua, el mejor tiempo de los parciales. null cuando no
+        /// y en tierra y agua, el tiempo total (suma de parciales). null cuando no
         /// hay nada que mostrar.
         /// </summary>
         private static ResumenTrabajoDto? ResumenDe(Trabajo trabajo)
@@ -134,17 +134,24 @@ namespace Entidades.Mapeos
                 };
             }
 
-            // Tierra y agua: la mejor marca es el parcial mas rapido.
-            var tiempos = trabajo.Parciales.Select(p => p.Tiempo).ToList();
-            if (tiempos.Count == 0)
+            // Tierra y agua: en el resumen de la fila va el tiempo total
+            // (suma de parciales). El detalle de cada parcial se ve al entrar.
+            var parciales = trabajo.Parciales.ToList();
+            if (parciales.Count == 0)
             {
                 return null;
+            }
+
+            var total = TimeSpan.Zero;
+            foreach (var parcial in parciales)
+            {
+                total += parcial.Tiempo;
             }
 
             return new ResumenTrabajoDto
             {
                 Tipo = trabajo.Tipo,
-                MejorTiempo = TiempoTexto.Formatear(tiempos.Min())
+                MejorTiempo = TiempoTexto.Formatear(total)
             };
         }
 
