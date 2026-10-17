@@ -13,7 +13,7 @@ namespace Controladores
     /// <summary>Trabajos de agua de un bote de equipo en la sesion.</summary>
     [ApiController]
     [Route("api/entrenamientos/{entrenamientoId:int}/equipos/{entrenamientoEquipoId:int}/trabajos")]
-    [Authorize(Roles = Identidad.RolesStaff)]
+    [Authorize]
     public class TrabajosEquipoController : ControllerBase
     {
         private readonly ITrabajoRepositorio _trabajos;
@@ -33,11 +33,17 @@ namespace Controladores
                 return NotFound(new { mensaje = "Bote no encontrado en la sesión." });
             }
 
+            if (await SoloLecturaPermitida(entrenamientoEquipoId) is { } rechazo)
+            {
+                return rechazo;
+            }
+
             var trabajos = await _trabajos.ObtenerPorEquipoAsync(entrenamientoEquipoId);
             return Ok(trabajos.Select(t => t.ToDto()));
         }
 
         [HttpPost]
+        [Authorize(Roles = Identidad.RolesStaff)]
         public async Task<ActionResult<TrabajoDto>> Crear(
             int entrenamientoId,
             int entrenamientoEquipoId,
@@ -73,6 +79,7 @@ namespace Controladores
         }
 
         [HttpPut("{trabajoId:int}")]
+        [Authorize(Roles = Identidad.RolesStaff)]
         public async Task<ActionResult<TrabajoDto>> Actualizar(
             int entrenamientoId,
             int entrenamientoEquipoId,
@@ -107,6 +114,7 @@ namespace Controladores
         }
 
         [HttpDelete("{trabajoId:int}")]
+        [Authorize(Roles = Identidad.RolesStaff)]
         public async Task<IActionResult> Eliminar(int entrenamientoId, int entrenamientoEquipoId, int trabajoId)
         {
             var trabajo = await _trabajos.ObtenerPorIdAsync(trabajoId);
@@ -149,5 +157,22 @@ namespace Controladores
 
         private static string? Limpiar(string? valor) =>
             string.IsNullOrWhiteSpace(valor) ? null : valor.Trim();
+
+        /// <summary>Staff o remero del bote pueden leer los trabajos.</summary>
+        private async Task<ActionResult?> SoloLecturaPermitida(int entrenamientoEquipoId)
+        {
+            if (Identidad.EsStaff(User))
+            {
+                return null;
+            }
+
+            var atletaId = Identidad.AtletaId(User);
+            if (atletaId is null || !await _equipos.EsMiembroAsync(entrenamientoEquipoId, atletaId.Value))
+            {
+                return Forbid();
+            }
+
+            return null;
+        }
     }
 }

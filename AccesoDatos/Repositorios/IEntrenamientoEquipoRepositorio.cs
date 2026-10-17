@@ -9,6 +9,8 @@ namespace AccesoDatos.Repositorios
 
         Task<bool> ExisteEnSesionAsync(int entrenamientoId, int entrenamientoEquipoId);
 
+        Task<bool> EsMiembroAsync(int entrenamientoEquipoId, int atletaId);
+
         Task<EntrenamientoEquipo> CargarAsync(
             int entrenamientoId,
             TipoBote tipo,

@@ -41,9 +41,15 @@ namespace Controladores
                 return NotFound(new { mensaje = "El atleta no está asignado a esa sesión." });
             }
 
-            var trabajos = await _trabajoRepositorio.ObtenerPorAtletaAsync(entrenamientoId, atletaId);
+            var propios = await _trabajoRepositorio.ObtenerPorAtletaAsync(entrenamientoId, atletaId);
+            var deBote = await _trabajoRepositorio.ObtenerDeEquiposPorAtletaAsync(entrenamientoId, atletaId);
+            var trabajos = propios
+                .Concat(deBote)
+                .OrderBy(t => t.HoraInicio)
+                .ThenBy(t => t.Id)
+                .Select(t => t.ToDto());
 
-            return Ok(trabajos.Select(t => t.ToDto()));
+            return Ok(trabajos);
         }
 
         /// <summary>Agrega un trabajo al atleta, con los parciales que vengan.</summary>

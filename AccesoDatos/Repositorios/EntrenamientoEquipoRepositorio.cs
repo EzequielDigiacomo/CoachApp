@@ -21,6 +21,10 @@ namespace AccesoDatos.Repositorios
             _context.EntrenamientoEquipos.AnyAsync(e =>
                 e.Id == entrenamientoEquipoId && e.EntrenamientoId == entrenamientoId);
 
+        public Task<bool> EsMiembroAsync(int entrenamientoEquipoId, int atletaId) =>
+            _context.EntrenamientoEquipoMiembros.AnyAsync(m =>
+                m.EntrenamientoEquipoId == entrenamientoEquipoId && m.AtletaId == atletaId);
+
         public async Task<EntrenamientoEquipo> CargarAsync(
             int entrenamientoId,
             TipoBote tipo,

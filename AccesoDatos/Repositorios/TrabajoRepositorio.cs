@@ -26,6 +26,16 @@ namespace AccesoDatos.Repositorios
                 .ThenBy(t => t.Id)
                 .ToListAsync();
 
+        public Task<List<Trabajo>> ObtenerDeEquiposPorAtletaAsync(int entrenamientoId, int atletaId) =>
+            ConDetalle(_context.Trabajos
+                .Where(t =>
+                    t.EntrenamientoId == entrenamientoId
+                    && t.EntrenamientoEquipoId != null
+                    && t.EntrenamientoEquipo!.Miembros.Any(m => m.AtletaId == atletaId)))
+                .OrderBy(t => t.HoraInicio)
+                .ThenBy(t => t.Id)
+                .ToListAsync();
+
         public Task<Trabajo?> ObtenerPorIdAsync(int trabajoId) =>
             ConDetalle(_context.Trabajos.Where(t => t.Id == trabajoId))
                 .FirstOrDefaultAsync();
