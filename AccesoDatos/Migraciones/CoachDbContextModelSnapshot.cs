@@ -190,6 +190,96 @@ namespace AccesoDatos.Migraciones
                     b.ToTable("Atletas", (string)null);
                 });
 
+            modelBuilder.Entity("Entidades.Control", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("AtletaId")
+                        .HasColumnType("integer");
+
+                    b.Property<DateOnly>("Fecha")
+                        .HasColumnType("date");
+
+                    b.Property<DateTime>("FechaCreacion")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Observaciones")
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
+                    b.Property<string>("Tipo")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AtletaId", "Tipo", "Fecha");
+
+                    b.ToTable("Controles", (string)null);
+                });
+
+            modelBuilder.Entity("Entidades.ControlEjercicio", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("ControlId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Nombre")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)");
+
+                    b.Property<int>("Orden")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ControlId", "Orden");
+
+                    b.ToTable("ControlEjercicios", (string)null);
+                });
+
+            modelBuilder.Entity("Entidades.ControlSerie", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("ControlEjercicioId")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("EsUnoRm")
+                        .HasColumnType("boolean");
+
+                    b.Property<int>("Orden")
+                        .HasColumnType("integer");
+
+                    b.Property<decimal>("PesoKg")
+                        .HasPrecision(6, 2)
+                        .HasColumnType("numeric(6,2)");
+
+                    b.Property<int>("Repeticiones")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ControlEjercicioId", "Orden");
+
+                    b.ToTable("ControlSeries", (string)null);
+                });
+
             modelBuilder.Entity("Entidades.CuentaGarmin", b =>
                 {
                     b.Property<int>("UsuarioId")
@@ -717,6 +807,39 @@ namespace AccesoDatos.Migraciones
                     b.Navigation("Atleta");
                 });
 
+            modelBuilder.Entity("Entidades.Control", b =>
+                {
+                    b.HasOne("Entidades.Atleta", "Atleta")
+                        .WithMany()
+                        .HasForeignKey("AtletaId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Atleta");
+                });
+
+            modelBuilder.Entity("Entidades.ControlEjercicio", b =>
+                {
+                    b.HasOne("Entidades.Control", "Control")
+                        .WithMany("Ejercicios")
+                        .HasForeignKey("ControlId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Control");
+                });
+
+            modelBuilder.Entity("Entidades.ControlSerie", b =>
+                {
+                    b.HasOne("Entidades.ControlEjercicio", "ControlEjercicio")
+                        .WithMany("Series")
+                        .HasForeignKey("ControlEjercicioId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("ControlEjercicio");
+                });
+
             modelBuilder.Entity("Entidades.CuentaGarmin", b =>
                 {
                     b.HasOne("Entidades.Usuario", "Usuario")
@@ -890,6 +1013,16 @@ namespace AccesoDatos.Migraciones
                     b.Navigation("Anotaciones");
 
                     b.Navigation("Entrenamientos");
+                });
+
+            modelBuilder.Entity("Entidades.Control", b =>
+                {
+                    b.Navigation("Ejercicios");
+                });
+
+            modelBuilder.Entity("Entidades.ControlEjercicio", b =>
+                {
+                    b.Navigation("Series");
                 });
 
             modelBuilder.Entity("Entidades.Entrenamiento", b =>

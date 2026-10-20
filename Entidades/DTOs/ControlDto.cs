@@ -1,0 +1,48 @@
+using Entidades.Enums;
+
+namespace Entidades.DTOs
+{
+    /// <summary>Control independiente de sesion, con sus ejercicios de gim.</summary>
+    public class ControlDto
+    {
+        public int Id { get; set; }
+
+        public int AtletaId { get; set; }
+
+        public string? AtletaNombre { get; set; }
+
+        public TipoTrabajo Tipo { get; set; }
+
+        public DateOnly Fecha { get; set; }
+
+        public string? Observaciones { get; set; }
+
+        public DateTime FechaCreacion { get; set; }
+
+        public List<ControlEjercicioDto> Ejercicios { get; set; } = [];
+    }
+
+    public class ControlEjercicioDto
+    {
+        public int Id { get; set; }
+
+        public string Nombre { get; set; } = string.Empty;
+
+        public int Orden { get; set; }
+
+        public List<ControlSerieDto> Series { get; set; } = [];
+    }
+
+    public class ControlSerieDto
+    {
+        public int Id { get; set; }
+
+        public int Repeticiones { get; set; }
+
+        public decimal PesoKg { get; set; }
+
+        public bool EsUnoRm { get; set; }
+
+        public int Orden { get; set; }
+    }
+}

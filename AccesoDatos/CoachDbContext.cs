@@ -29,6 +29,9 @@ namespace AccesoDatos
         public DbSet<TrabajoEjercicio> TrabajoEjercicios => Set<TrabajoEjercicio>();
         public DbSet<TrabajoSerie> TrabajoSeries => Set<TrabajoSerie>();
         public DbSet<TrabajoPalada> TrabajoPaladas => Set<TrabajoPalada>();
+        public DbSet<Control> Controles => Set<Control>();
+        public DbSet<ControlEjercicio> ControlEjercicios => Set<ControlEjercicio>();
+        public DbSet<ControlSerie> ControlSeries => Set<ControlSerie>();
         public DbSet<CuentaGarmin> CuentasGarmin => Set<CuentaGarmin>();
 
         /// <summary>
@@ -234,6 +237,44 @@ namespace AccesoDatos
                 entity.HasOne(p => p.Trabajo)
                     .WithMany(t => t.Paladas)
                     .HasForeignKey(p => p.TrabajoId)
+                    .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            modelBuilder.Entity<Control>(entity =>
+            {
+                entity.ToTable("Controles");
+                entity.HasKey(c => c.Id);
+                entity.Property(c => c.Tipo).HasConversion<string>().HasMaxLength(20);
+                entity.HasIndex(c => new { c.AtletaId, c.Tipo, c.Fecha });
+
+                entity.HasOne(c => c.Atleta)
+                    .WithMany()
+                    .HasForeignKey(c => c.AtletaId)
+                    .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            modelBuilder.Entity<ControlEjercicio>(entity =>
+            {
+                entity.ToTable("ControlEjercicios");
+                entity.HasKey(e => e.Id);
+                entity.HasIndex(e => new { e.ControlId, e.Orden });
+
+                entity.HasOne(e => e.Control)
+                    .WithMany(c => c.Ejercicios)
+                    .HasForeignKey(e => e.ControlId)
+                    .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            modelBuilder.Entity<ControlSerie>(entity =>
+            {
+                entity.ToTable("ControlSeries");
+                entity.HasKey(s => s.Id);
+                entity.Property(s => s.PesoKg).HasPrecision(6, 2);
+                entity.HasIndex(s => new { s.ControlEjercicioId, s.Orden });
+
+                entity.HasOne(s => s.ControlEjercicio)
+                    .WithMany(e => e.Series)
+                    .HasForeignKey(s => s.ControlEjercicioId)
                     .OnDelete(DeleteBehavior.Cascade);
             });
 
