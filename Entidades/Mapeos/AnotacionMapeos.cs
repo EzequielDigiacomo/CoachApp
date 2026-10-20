@@ -24,6 +24,7 @@ namespace Entidades.Mapeos
                 AtletaId = anotacion.AtletaId,
                 AtletaNombre = anotacion.Atleta?.Nombre,
                 AtletaApellido = anotacion.Atleta?.Apellido,
+                AtletaColor = anotacion.Atleta?.Color,
 
                 EntrenamientoId = anotacion.EntrenamientoId,
                 EntrenamientoFecha = anotacion.Entrenamiento?.Fecha,

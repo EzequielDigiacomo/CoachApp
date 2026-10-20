@@ -13,6 +13,7 @@ namespace Entidades.Mapeos
                 AtletaNombre = control.Atleta is null
                     ? null
                     : $"{control.Atleta.Apellido}, {control.Atleta.Nombre}",
+                AtletaColor = control.Atleta?.Color,
                 Tipo = control.Tipo,
                 Fecha = control.Fecha,
                 Observaciones = control.Observaciones,

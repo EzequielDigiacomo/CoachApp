@@ -116,6 +116,7 @@ namespace Controladores
             AtletaId = nota.AtletaId,
             Nombre = nota.Atleta?.Nombre ?? string.Empty,
             Apellido = nota.Atleta?.Apellido ?? string.Empty,
+            Color = nota.Atleta?.Color,
             Texto = nota.Texto,
             FechaCreacion = nota.FechaCreacion
         };

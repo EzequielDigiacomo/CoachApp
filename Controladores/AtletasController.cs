@@ -195,6 +195,34 @@ namespace Controladores
             return Ok(atleta.ToDto());
         }
 
+        /// <summary>Guarda los colores de identificacion de varios atletas.</summary>
+        [HttpPut("colores")]
+        [Authorize(Roles = Identidad.RolesStaff)]
+        public async Task<ActionResult<IEnumerable<AtletaDto>>> GuardarColores(
+            [FromBody] GuardarColoresAtletasRequest request)
+        {
+            var ids = request.Colores.Select(c => c.AtletaId).Distinct().ToList();
+            var atletas = await _atletaRepositorio.ObtenerPorIdsAsync(ids);
+
+            if (atletas.Count != ids.Count)
+            {
+                return BadRequest(new { mensaje = "Alguno de los atletas indicados no existe." });
+            }
+
+            var porId = atletas.ToDictionary(a => a.Id);
+            foreach (var item in request.Colores)
+            {
+                porId[item.AtletaId].Color = GuardarColoresAtletasRequest.Normalizar(item.Color);
+            }
+
+            await _atletaRepositorio.GuardarCambiosAsync();
+
+            return Ok(atletas
+                .OrderBy(a => a.Apellido)
+                .ThenBy(a => a.Nombre)
+                .Select(a => a.ToDto()));
+        }
+
         /// <summary>Quita puntos y espacios del DNI para guardarlo siempre igual.</summary>
         private static string NormalizarDni(string dni) =>
             new(dni.Where(c => char.IsDigit(c)).ToArray());

@@ -61,6 +61,7 @@ namespace Entidades.Mapeos
                     AtletaId = m.AtletaId,
                     Nombre = m.Atleta.Nombre,
                     Apellido = m.Atleta.Apellido,
+                    Color = m.Atleta.Color,
                     Orden = m.Orden
                 })
                 .ToList();
@@ -96,6 +97,7 @@ namespace Entidades.Mapeos
                 Apellido = vinculo.Atleta.Apellido,
                 Dni = vinculo.Atleta.Dni,
                 Edad = edad,
+                Color = vinculo.Atleta.Color,
                 Categorias = CategoriasAtleta.Nombres(vinculo.Atleta.FechaNacimiento),
                 Asistio = vinculo.Asistio,
                 CantidadTrabajos = trabajos.Count,

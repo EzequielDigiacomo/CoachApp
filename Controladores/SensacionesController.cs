@@ -111,6 +111,7 @@ namespace Controladores
             AtletaId = sensacion.AtletaId,
             Nombre = sensacion.Atleta?.Nombre ?? string.Empty,
             Apellido = sensacion.Atleta?.Apellido ?? string.Empty,
+            Color = sensacion.Atleta?.Color,
             Texto = sensacion.Texto,
             FechaCreacion = sensacion.FechaCreacion
         };

@@ -14,6 +14,7 @@ namespace Entidades.Mapeos
                     AtletaId = m.AtletaId,
                     Nombre = m.Atleta.Nombre,
                     Apellido = m.Atleta.Apellido,
+                    Color = m.Atleta.Color,
                     Orden = m.Orden
                 })
                 .ToList();

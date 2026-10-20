@@ -25,6 +25,7 @@ namespace Entidades.Mapeos
                 Email = atleta.Email,
                 Dni = atleta.Dni,
                 Telefono = atleta.Telefono,
+                Color = atleta.Color,
                 Activo = atleta.Activo,
                 FechaAlta = atleta.FechaAlta
             };

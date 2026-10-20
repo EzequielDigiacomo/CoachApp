@@ -21,5 +21,7 @@ namespace Controladores.Contratos
         Task<IActionResult> DarDeBaja(int id);
 
         Task<ActionResult<AtletaDto>> CambiarEstado(int id, ActualizarEstadoAtletaRequest request);
+
+        Task<ActionResult<IEnumerable<AtletaDto>>> GuardarColores(GuardarColoresAtletasRequest request);
     }
 }

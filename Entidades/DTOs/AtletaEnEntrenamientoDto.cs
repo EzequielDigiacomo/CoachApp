@@ -11,6 +11,9 @@ namespace Entidades.DTOs
         public string Dni { get; set; } = string.Empty;
         public int Edad { get; set; }
 
+        /// <summary>Color de identificacion (#RRGGBB).</summary>
+        public string? Color { get; set; }
+
         /// <summary>Nombres de las categorias que cubre esa edad.</summary>
         public List<string> Categorias { get; set; } = [];
 

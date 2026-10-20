@@ -8,6 +8,7 @@ namespace Entidades.DTOs
         public int AtletaId { get; set; }
         public string Nombre { get; set; } = string.Empty;
         public string Apellido { get; set; } = string.Empty;
+        public string? Color { get; set; }
         public string? EmailAtleta { get; set; }
         public int? UsuarioId { get; set; }
         public string? NombreUsuario { get; set; }

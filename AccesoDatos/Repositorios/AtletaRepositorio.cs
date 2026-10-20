@@ -58,5 +58,15 @@ namespace AccesoDatos.Repositorios
             _context.Atletas.Update(atleta);
             await _context.SaveChangesAsync();
         }
+
+        public Task<List<Atleta>> ObtenerPorIdsAsync(IEnumerable<int> ids)
+        {
+            var lista = ids.Distinct().ToList();
+            return _context.Atletas
+                .Where(a => lista.Contains(a.Id))
+                .ToListAsync();
+        }
+
+        public Task GuardarCambiosAsync() => _context.SaveChangesAsync();
     }
 }

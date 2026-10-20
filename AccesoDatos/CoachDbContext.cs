@@ -65,6 +65,7 @@ namespace AccesoDatos
                 entity.ToTable("Atletas");
                 entity.HasKey(a => a.Id);
                 entity.HasIndex(a => a.Dni).IsUnique();
+                entity.Property(a => a.Color).HasMaxLength(7);
             });
 
             modelBuilder.Entity<Entrenamiento>(entity =>

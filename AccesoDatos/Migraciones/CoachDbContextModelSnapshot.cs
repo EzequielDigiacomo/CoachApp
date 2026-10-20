@@ -158,6 +158,10 @@ namespace AccesoDatos.Migraciones
                         .HasMaxLength(150)
                         .HasColumnType("character varying(150)");
 
+                    b.Property<string>("Color")
+                        .HasMaxLength(7)
+                        .HasColumnType("character varying(7)");
+
                     b.Property<string>("Dni")
                         .IsRequired()
                         .HasMaxLength(20)

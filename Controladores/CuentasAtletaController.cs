@@ -147,6 +147,7 @@ namespace Controladores
             AtletaId = atleta.Id,
             Nombre = atleta.Nombre,
             Apellido = atleta.Apellido,
+            Color = atleta.Color,
             EmailAtleta = atleta.Email,
             UsuarioId = usuario?.Id,
             NombreUsuario = usuario?.NombreUsuario,

@@ -29,6 +29,12 @@ namespace Entidades
         [MaxLength(30)]
         public string? Telefono { get; set; }
 
+        /// <summary>
+        /// Color de identificacion en la UI (#RRGGBB). Null = sin color asignado.
+        /// </summary>
+        [MaxLength(7)]
+        public string? Color { get; set; }
+
         public bool Activo { get; set; } = true;
 
         public DateTime FechaAlta { get; set; } = DateTime.UtcNow;

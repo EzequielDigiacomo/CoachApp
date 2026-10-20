@@ -18,6 +18,10 @@ namespace Entidades.DTOs
         public string? Email { get; set; }
         public string Dni { get; set; } = string.Empty;
         public string? Telefono { get; set; }
+
+        /// <summary>Color de identificacion (#RRGGBB). Null si no tiene.</summary>
+        public string? Color { get; set; }
+
         public bool Activo { get; set; }
         public DateTime FechaAlta { get; set; }
     }

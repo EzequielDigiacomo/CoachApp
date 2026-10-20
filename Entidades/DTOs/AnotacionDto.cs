@@ -25,6 +25,7 @@ namespace Entidades.DTOs
         public int? AtletaId { get; set; }
         public string? AtletaNombre { get; set; }
         public string? AtletaApellido { get; set; }
+        public string? AtletaColor { get; set; }
 
         public int? EntrenamientoId { get; set; }
         public DateOnly? EntrenamientoFecha { get; set; }
