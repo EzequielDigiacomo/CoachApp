@@ -16,6 +16,7 @@ namespace Entidades.Mapeos
                 AtletaColor = control.Atleta?.Color,
                 Tipo = control.Tipo,
                 Fecha = control.Fecha,
+                EsAutoCarga = control.EsAutoCarga,
                 Observaciones = control.Observaciones,
                 FechaCreacion = control.FechaCreacion,
                 Ejercicios = control.Ejercicios

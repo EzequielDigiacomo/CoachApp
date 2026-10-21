@@ -101,6 +101,7 @@ namespace Controladores
                 AtletaId = request.AtletaId.Value,
                 Tipo = request.Tipo!.Value,
                 Fecha = request.Fecha!.Value,
+                EsAutoCarga = request.EsAutoCarga,
                 Observaciones = Limpiar(request.Observaciones),
                 FechaCreacion = DateTime.UtcNow
             };
@@ -127,6 +128,7 @@ namespace Controladores
             control.AtletaId = request.AtletaId.Value;
             control.Tipo = request.Tipo!.Value;
             control.Fecha = request.Fecha!.Value;
+            control.EsAutoCarga = request.EsAutoCarga;
             control.Observaciones = Limpiar(request.Observaciones);
 
             await _controlRepositorio.ActualizarAsync(control, ArmarEjercicios(request));
@@ -171,6 +173,8 @@ namespace Controladores
                 return [];
             }
 
+            var auto = request.EsAutoCarga;
+
             return request.Ejercicios
                 .Select(e => new ControlEjercicio
                 {
@@ -179,8 +183,8 @@ namespace Controladores
                         .Select(s => new ControlSerie
                         {
                             Repeticiones = s.Repeticiones,
-                            PesoKg = s.PesoKg,
-                            EsUnoRm = s.EsUnoRm
+                            PesoKg = auto ? null : s.PesoKg,
+                            EsUnoRm = auto ? false : s.EsUnoRm
                         })
                         .ToList()
                 })

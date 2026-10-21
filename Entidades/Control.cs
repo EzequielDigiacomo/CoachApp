@@ -19,6 +19,11 @@ namespace Entidades
 
         public DateOnly Fecha { get; set; }
 
+        /// <summary>
+        /// Auto carga (peso corporal): solo ejercicio y repeticiones, sin kg ni 1RM.
+        /// </summary>
+        public bool EsAutoCarga { get; set; }
+
         [MaxLength(300)]
         public string? Observaciones { get; set; }
 

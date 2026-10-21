@@ -15,6 +15,9 @@ namespace Entidades.DTOs
         [Required(ErrorMessage = "Indicá la fecha del control.")]
         public DateOnly? Fecha { get; set; }
 
+        /// <summary>Sin kilos ni 1RM: solo ejercicio y repeticiones.</summary>
+        public bool EsAutoCarga { get; set; }
+
         [MaxLength(300, ErrorMessage = "Las observaciones no pueden superar los 300 caracteres.")]
         public string? Observaciones { get; set; }
 
@@ -64,7 +67,19 @@ namespace Entidades.DTOs
                             new[] { nameof(Ejercicios) });
                     }
 
-                    if (serie.PesoKg < 0)
+                    if (EsAutoCarga)
+                    {
+                        if (serie.EsUnoRm)
+                        {
+                            yield return new ValidationResult(
+                                "En auto carga no se marca 1RM.",
+                                new[] { nameof(Ejercicios) });
+                        }
+
+                        continue;
+                    }
+
+                    if (serie.PesoKg is < 0)
                     {
                         yield return new ValidationResult(
                             $"La serie {j + 1} del ejercicio {i + 1} tiene un peso inválido.",
@@ -74,7 +89,7 @@ namespace Entidades.DTOs
                     if (serie.EsUnoRm)
                     {
                         marcadas++;
-                        if (serie.PesoKg <= 0)
+                        if (serie.PesoKg is null or <= 0)
                         {
                             yield return new ValidationResult(
                                 $"La serie marcada como 1RM del ejercicio {i + 1} necesita un peso.",
@@ -83,7 +98,7 @@ namespace Entidades.DTOs
                     }
                 }
 
-                if (marcadas > 1)
+                if (!EsAutoCarga && marcadas > 1)
                 {
                     yield return new ValidationResult(
                         $"El ejercicio {i + 1} solo puede tener una serie marcada como 1RM.",
@@ -107,7 +122,7 @@ namespace Entidades.DTOs
         public int Repeticiones { get; set; }
 
         [Range(0, 9999, ErrorMessage = "El peso no es válido.")]
-        public decimal PesoKg { get; set; }
+        public decimal? PesoKg { get; set; }
 
         public bool EsUnoRm { get; set; }
     }

@@ -17,6 +17,8 @@ namespace Entidades.DTOs
 
         public DateOnly Fecha { get; set; }
 
+        public bool EsAutoCarga { get; set; }
+
         public string? Observaciones { get; set; }
 
         public DateTime FechaCreacion { get; set; }
@@ -41,7 +43,7 @@ namespace Entidades.DTOs
 
         public int Repeticiones { get; set; }
 
-        public decimal PesoKg { get; set; }
+        public decimal? PesoKg { get; set; }
 
         public bool EsUnoRm { get; set; }
 

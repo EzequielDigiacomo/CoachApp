@@ -205,6 +205,9 @@ namespace AccesoDatos.Migraciones
                     b.Property<int>("AtletaId")
                         .HasColumnType("integer");
 
+                    b.Property<bool>("EsAutoCarga")
+                        .HasColumnType("boolean");
+
                     b.Property<DateOnly>("Fecha")
                         .HasColumnType("date");
 
@@ -270,7 +273,7 @@ namespace AccesoDatos.Migraciones
                     b.Property<int>("Orden")
                         .HasColumnType("integer");
 
-                    b.Property<decimal>("PesoKg")
+                    b.Property<decimal?>("PesoKg")
                         .HasPrecision(6, 2)
                         .HasColumnType("numeric(6,2)");
 
