@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using Entidades.Enums;
+using Entidades.Util;
 
 namespace Entidades.DTOs
 {
@@ -15,8 +16,20 @@ namespace Entidades.DTOs
         [Required(ErrorMessage = "Indicá la fecha del control.")]
         public DateOnly? Fecha { get; set; }
 
-        /// <summary>Sin kilos ni 1RM: solo ejercicio y repeticiones.</summary>
+        /// <summary>Sin kilos ni 1RM: solo ejercicio y repeticiones (gimnasio).</summary>
         public bool EsAutoCarga { get; set; }
+
+        /// <summary>Distancia en metros (agua).</summary>
+        public int? DistanciaMetros { get; set; }
+
+        /// <summary>Tiempo logrado (agua), ej. "2:16" o "2:16,5".</summary>
+        public string? Tiempo { get; set; }
+
+        /// <summary>Tiempo testigo de referencia (agua).</summary>
+        public string? TiempoTestigo { get; set; }
+
+        /// <summary>Año del tiempo testigo (agua).</summary>
+        public int? AnioTestigo { get; set; }
 
         [MaxLength(300, ErrorMessage = "Las observaciones no pueden superar los 300 caracteres.")]
         public string? Observaciones { get; set; }
@@ -25,6 +38,39 @@ namespace Entidades.DTOs
 
         public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
         {
+            if (Tipo == TipoTrabajo.Agua)
+            {
+                if (DistanciaMetros is null or <= 0)
+                {
+                    yield return new ValidationResult(
+                        "Indicá la distancia en metros.",
+                        new[] { nameof(DistanciaMetros) });
+                }
+
+                if (string.IsNullOrWhiteSpace(Tiempo) || !TiempoTexto.IntentaParse(Tiempo, out _))
+                {
+                    yield return new ValidationResult(
+                        "El tiempo no es válido. Escribilo como 2:16 o 2:16,5.",
+                        new[] { nameof(Tiempo) });
+                }
+
+                if (!string.IsNullOrWhiteSpace(TiempoTestigo) && !TiempoTexto.IntentaParse(TiempoTestigo, out _))
+                {
+                    yield return new ValidationResult(
+                        "El tiempo testigo no es válido. Escribilo como 2:16 o 2:16,5.",
+                        new[] { nameof(TiempoTestigo) });
+                }
+
+                if (AnioTestigo is not null && (AnioTestigo < 1990 || AnioTestigo > 2100))
+                {
+                    yield return new ValidationResult(
+                        "El año del testigo no es válido.",
+                        new[] { nameof(AnioTestigo) });
+                }
+
+                yield break;
+            }
+
             if (Tipo != TipoTrabajo.Gimnasio)
             {
                 yield break;

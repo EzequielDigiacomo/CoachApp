@@ -21,8 +21,21 @@ namespace Entidades
 
         /// <summary>
         /// Auto carga (peso corporal): solo ejercicio y repeticiones, sin kg ni 1RM.
+        /// Solo aplica a controles de gimnasio.
         /// </summary>
         public bool EsAutoCarga { get; set; }
+
+        /// <summary>Distancia del control de agua, en metros.</summary>
+        public int? DistanciaMetros { get; set; }
+
+        /// <summary>Tiempo logrado en el control de agua.</summary>
+        public TimeSpan? Tiempo { get; set; }
+
+        /// <summary>Tiempo testigo de referencia (del año indicado).</summary>
+        public TimeSpan? TiempoTestigo { get; set; }
+
+        /// <summary>Año al que corresponde el tiempo testigo.</summary>
+        public int? AnioTestigo { get; set; }
 
         [MaxLength(300)]
         public string? Observaciones { get; set; }

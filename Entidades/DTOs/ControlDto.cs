@@ -2,7 +2,7 @@ using Entidades.Enums;
 
 namespace Entidades.DTOs
 {
-    /// <summary>Control independiente de sesion, con sus ejercicios de gim.</summary>
+    /// <summary>Control independiente de sesion (gim o agua).</summary>
     public class ControlDto
     {
         public int Id { get; set; }
@@ -18,6 +18,27 @@ namespace Entidades.DTOs
         public DateOnly Fecha { get; set; }
 
         public bool EsAutoCarga { get; set; }
+
+        /// <summary>Distancia del control de agua (m).</summary>
+        public int? DistanciaMetros { get; set; }
+
+        /// <summary>Tiempo logrado, ya formateado ("2:16" / "2:16.5").</summary>
+        public string? Tiempo { get; set; }
+
+        /// <summary>Tiempo testigo de referencia, formateado.</summary>
+        public string? TiempoTestigo { get; set; }
+
+        /// <summary>Año del tiempo testigo.</summary>
+        public int? AnioTestigo { get; set; }
+
+        /// <summary>Velocidad promedio en km/h, calculada con distancia y tiempo.</summary>
+        public decimal? VelocidadKmh { get; set; }
+
+        /// <summary>Categoria etaria del atleta al momento de la consulta.</summary>
+        public string? Categoria { get; set; }
+
+        /// <summary>Diferencia con el testigo (negativo = mas rapido). Formateada.</summary>
+        public string? DiferenciaTestigo { get; set; }
 
         public string? Observaciones { get; set; }
 

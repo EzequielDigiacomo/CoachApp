@@ -202,7 +202,13 @@ namespace AccesoDatos.Migraciones
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
+                    b.Property<int?>("AnioTestigo")
+                        .HasColumnType("integer");
+
                     b.Property<int>("AtletaId")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("DistanciaMetros")
                         .HasColumnType("integer");
 
                     b.Property<bool>("EsAutoCarga")
@@ -217,6 +223,12 @@ namespace AccesoDatos.Migraciones
                     b.Property<string>("Observaciones")
                         .HasMaxLength(300)
                         .HasColumnType("character varying(300)");
+
+                    b.Property<TimeSpan?>("Tiempo")
+                        .HasColumnType("interval");
+
+                    b.Property<TimeSpan?>("TiempoTestigo")
+                        .HasColumnType("interval");
 
                     b.Property<string>("Tipo")
                         .IsRequired()

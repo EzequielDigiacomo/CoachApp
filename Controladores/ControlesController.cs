@@ -5,6 +5,7 @@ using Entidades;
 using Entidades.DTOs;
 using Entidades.Enums;
 using Entidades.Mapeos;
+using Entidades.Util;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -101,10 +102,10 @@ namespace Controladores
                 AtletaId = request.AtletaId.Value,
                 Tipo = request.Tipo!.Value,
                 Fecha = request.Fecha!.Value,
-                EsAutoCarga = request.EsAutoCarga,
                 Observaciones = Limpiar(request.Observaciones),
                 FechaCreacion = DateTime.UtcNow
             };
+            AplicarDetalle(control, request);
 
             var creado = await _controlRepositorio.CrearAsync(control, ArmarEjercicios(request));
             return CreatedAtAction(nameof(ObtenerPorId), new { id = creado.Id }, creado.ToDto());
@@ -128,8 +129,8 @@ namespace Controladores
             control.AtletaId = request.AtletaId.Value;
             control.Tipo = request.Tipo!.Value;
             control.Fecha = request.Fecha!.Value;
-            control.EsAutoCarga = request.EsAutoCarga;
             control.Observaciones = Limpiar(request.Observaciones);
+            AplicarDetalle(control, request);
 
             await _controlRepositorio.ActualizarAsync(control, ArmarEjercicios(request));
             var actualizado = await _controlRepositorio.ObtenerPorIdAsync(id);
@@ -164,6 +165,29 @@ namespace Controladores
 
             await Task.CompletedTask;
             return null;
+        }
+
+        private static void AplicarDetalle(Control control, GuardarControlRequest request)
+        {
+            if (request.Tipo == TipoTrabajo.Gimnasio)
+            {
+                control.EsAutoCarga = request.EsAutoCarga;
+                control.DistanciaMetros = null;
+                control.Tiempo = null;
+                control.TiempoTestigo = null;
+                control.AnioTestigo = null;
+                return;
+            }
+
+            control.EsAutoCarga = false;
+            control.DistanciaMetros = request.DistanciaMetros;
+            control.Tiempo = TiempoTexto.IntentaParse(request.Tiempo, out var tiempo) ? tiempo : null;
+            control.TiempoTestigo = TiempoTexto.IntentaParse(request.TiempoTestigo, out var testigo)
+                ? testigo
+                : null;
+            control.AnioTestigo = string.IsNullOrWhiteSpace(request.TiempoTestigo)
+                ? null
+                : request.AnioTestigo;
         }
 
         private static List<ControlEjercicio> ArmarEjercicios(GuardarControlRequest request)
