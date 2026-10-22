@@ -182,12 +182,21 @@ namespace Controladores
             control.EsAutoCarga = false;
             control.DistanciaMetros = request.DistanciaMetros;
             control.Tiempo = TiempoTexto.IntentaParse(request.Tiempo, out var tiempo) ? tiempo : null;
-            control.TiempoTestigo = TiempoTexto.IntentaParse(request.TiempoTestigo, out var testigo)
-                ? testigo
-                : null;
-            control.AnioTestigo = string.IsNullOrWhiteSpace(request.TiempoTestigo)
-                ? null
-                : request.AnioTestigo;
+
+            if (request.Tipo == TipoTrabajo.Agua)
+            {
+                control.TiempoTestigo = TiempoTexto.IntentaParse(request.TiempoTestigo, out var testigo)
+                    ? testigo
+                    : null;
+                control.AnioTestigo = string.IsNullOrWhiteSpace(request.TiempoTestigo)
+                    ? null
+                    : request.AnioTestigo;
+            }
+            else
+            {
+                control.TiempoTestigo = null;
+                control.AnioTestigo = null;
+            }
         }
 
         private static List<ControlEjercicio> ArmarEjercicios(GuardarControlRequest request)

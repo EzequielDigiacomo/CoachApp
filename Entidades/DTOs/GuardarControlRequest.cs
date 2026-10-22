@@ -19,10 +19,10 @@ namespace Entidades.DTOs
         /// <summary>Sin kilos ni 1RM: solo ejercicio y repeticiones (gimnasio).</summary>
         public bool EsAutoCarga { get; set; }
 
-        /// <summary>Distancia en metros (agua).</summary>
+        /// <summary>Distancia en metros (agua / tierra).</summary>
         public int? DistanciaMetros { get; set; }
 
-        /// <summary>Tiempo logrado (agua), ej. "2:16" o "2:16,5".</summary>
+        /// <summary>Tiempo logrado (agua / tierra), ej. "2:16" o "2:16,5".</summary>
         public string? Tiempo { get; set; }
 
         /// <summary>Tiempo testigo de referencia (agua).</summary>
@@ -38,7 +38,7 @@ namespace Entidades.DTOs
 
         public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
         {
-            if (Tipo == TipoTrabajo.Agua)
+            if (Tipo is TipoTrabajo.Agua or TipoTrabajo.Tierra)
             {
                 if (DistanciaMetros is null or <= 0)
                 {
@@ -54,18 +54,21 @@ namespace Entidades.DTOs
                         new[] { nameof(Tiempo) });
                 }
 
-                if (!string.IsNullOrWhiteSpace(TiempoTestigo) && !TiempoTexto.IntentaParse(TiempoTestigo, out _))
+                if (Tipo == TipoTrabajo.Agua)
                 {
-                    yield return new ValidationResult(
-                        "El tiempo testigo no es válido. Escribilo como 2:16 o 2:16,5.",
-                        new[] { nameof(TiempoTestigo) });
-                }
+                    if (!string.IsNullOrWhiteSpace(TiempoTestigo) && !TiempoTexto.IntentaParse(TiempoTestigo, out _))
+                    {
+                        yield return new ValidationResult(
+                            "El tiempo testigo no es válido. Escribilo como 2:16 o 2:16,5.",
+                            new[] { nameof(TiempoTestigo) });
+                    }
 
-                if (AnioTestigo is not null && (AnioTestigo < 1990 || AnioTestigo > 2100))
-                {
-                    yield return new ValidationResult(
-                        "El año del testigo no es válido.",
-                        new[] { nameof(AnioTestigo) });
+                    if (AnioTestigo is not null && (AnioTestigo < 1990 || AnioTestigo > 2100))
+                    {
+                        yield return new ValidationResult(
+                            "El año del testigo no es válido.",
+                            new[] { nameof(AnioTestigo) });
+                    }
                 }
 
                 yield break;
