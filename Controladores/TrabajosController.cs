@@ -79,6 +79,11 @@ namespace Controladores
                 return NotFound(new { mensaje = "Entrenamiento no encontrado." });
             }
 
+            if (AtletaSinPermisoDeCarga(entrenamiento) is { } sinPermiso)
+            {
+                return sinPermiso;
+            }
+
             // El tipo lo fija la sesion; el cliente no puede mandar otro.
             request.Tipo = entrenamiento.Tipo;
 
@@ -129,6 +134,11 @@ namespace Controladores
                 return NotFound(new { mensaje = "Entrenamiento no encontrado." });
             }
 
+            if (AtletaSinPermisoDeCarga(entrenamiento) is { } sinPermiso)
+            {
+                return sinPermiso;
+            }
+
             request.Tipo = entrenamiento.Tipo;
             trabajo.Tipo = entrenamiento.Tipo;
             trabajo.HoraInicio = TiempoTexto.IntentaParseHora(request.HoraInicio, out var hora) ? hora : null;
@@ -160,6 +170,17 @@ namespace Controladores
                 return NotFound(new { mensaje = "Trabajo no encontrado." });
             }
 
+            var entrenamiento = await _entrenamientoRepositorio.ObtenerPorIdAsync(entrenamientoId);
+            if (entrenamiento is null)
+            {
+                return NotFound(new { mensaje = "Entrenamiento no encontrado." });
+            }
+
+            if (AtletaSinPermisoDeCarga(entrenamiento) is { } sinPermiso)
+            {
+                return sinPermiso;
+            }
+
             await _trabajoRepositorio.EliminarAsync(trabajo);
 
             return NoContent();
@@ -180,6 +201,28 @@ namespace Controladores
             var trabajos = await _trabajoRepositorio.ObtenerHistorialAsync(atletaId);
 
             return Ok(trabajos.Select(t => t.ToDto()));
+        }
+
+        /// <summary>
+        /// El atleta solo puede cargar/editar trabajos de gimnasio.
+        /// Tierra y agua los carga el staff o llegan de Garmin.
+        /// </summary>
+        private ActionResult? AtletaSinPermisoDeCarga(Entrenamiento entrenamiento)
+        {
+            if (!Identidad.EsAtleta(User))
+            {
+                return null;
+            }
+
+            if (entrenamiento.Tipo == TipoTrabajo.Gimnasio)
+            {
+                return null;
+            }
+
+            return StatusCode(403, new
+            {
+                mensaje = "En tierra y agua solo el entrenador puede cargar trabajos. Vos podés ver lo cargado y lo que viene de Garmin."
+            });
         }
 
         /// <summary>
