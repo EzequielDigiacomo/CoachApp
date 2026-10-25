@@ -7,6 +7,7 @@ using Entidades;
 using Entidades.DTOs;
 using Entidades.Enums;
 using Entidades.Mapeos;
+using Entidades.Util;
 using Microsoft.AspNetCore.DataProtection;
 
 namespace Controladores.Integraciones
@@ -20,6 +21,14 @@ namespace Controladores.Integraciones
         Task DesvincularAsync(int usuarioId);
 
         Task<SincronizacionGarminDto?> SincronizarAsync(int usuarioId, int entrenamientoId, CancellationToken cancelacion);
+
+        Task<PreviewGarminDto?> PreviewAsync(int usuarioId, int entrenamientoId, CancellationToken cancelacion);
+
+        Task<SincronizacionGarminDto?> ImportarAsync(
+            int usuarioId,
+            int entrenamientoId,
+            ImportarGarminRequest request,
+            CancellationToken cancelacion);
 
         Task<CalendarioGarminDto> CalendarioAsync(
             int usuarioId,
@@ -461,6 +470,268 @@ namespace Controladores.Integraciones
             };
         }
 
+        public async Task<PreviewGarminDto?> PreviewAsync(
+            int usuarioId,
+            int entrenamientoId,
+            CancellationToken cancelacion)
+        {
+            var contexto = await ArmarContextoAsync(usuarioId, entrenamientoId, cancelacion);
+            if (contexto is null)
+            {
+                return null;
+            }
+
+            var (entrenamiento, cuenta, pares, avisos) = contexto.Value;
+            var atletas = new List<AtletaPreviewGarminDto>();
+
+            foreach (var (vinculo, amigo) in pares)
+            {
+                var crudas = await EjecutarAsync(
+                    cuenta,
+                    access => _garmin.ObtenerActividadesDelDiaAsync(
+                        access,
+                        amigo.DisplayName,
+                        entrenamiento.Fecha,
+                        cancelacion),
+                    cancelacion);
+
+                var actividades = new List<ActividadPreviewGarminDto>();
+                foreach (var cruda in crudas.OrderBy(a => a.InicioLocal))
+                {
+                    var completa = await EjecutarAsync(
+                        cuenta,
+                        access => _garmin.CompletarAsync(access, cruda, cancelacion),
+                        cancelacion);
+
+                    var marcas = Marcas(completa);
+                    actividades.Add(new ActividadPreviewGarminDto
+                    {
+                        ActividadId = completa.ActividadId,
+                        Nombre = completa.Nombre,
+                        Tipo = completa.Tipo,
+                        Inicio = completa.InicioLocal is null
+                            ? null
+                            : TiempoTexto.FormatearHora(TimeOnly.FromDateTime(completa.InicioLocal.Value)),
+                        DistanciaMetros = completa.DistanciaMetros,
+                        DuracionSegundos = completa.DuracionSegundos,
+                        CoincideTipoSesion = CoincideTipoSesion(completa.Tipo, entrenamiento.Tipo),
+                        Tramos = marcas
+                            .Select((m, i) => new TramoPreviewGarminDto
+                            {
+                                Indice = i,
+                                Metros = m.Metros,
+                                Tiempo = TiempoTexto.Formatear(m.Tiempo),
+                                Ppm = m.Ppm
+                            })
+                            .ToList()
+                    });
+                }
+
+                if (actividades.Count == 0)
+                {
+                    avisos.Add(
+                        $"{vinculo.Atleta.Apellido}, {vinculo.Atleta.Nombre} no tiene actividad en Garmin ese día.");
+                    continue;
+                }
+
+                atletas.Add(new AtletaPreviewGarminDto
+                {
+                    AtletaId = vinculo.AtletaId,
+                    Nombre = vinculo.Atleta.Nombre,
+                    Apellido = vinculo.Atleta.Apellido,
+                    Actividades = actividades
+                });
+            }
+
+            var requiere = atletas.Any(a =>
+                a.Actividades.Count > 1 || a.Actividades.Any(act => act.Tramos.Count > 1));
+
+            return new PreviewGarminDto
+            {
+                Avisos = avisos,
+                RequiereEleccion = requiere,
+                Atletas = atletas
+            };
+        }
+
+        public async Task<SincronizacionGarminDto?> ImportarAsync(
+            int usuarioId,
+            int entrenamientoId,
+            ImportarGarminRequest request,
+            CancellationToken cancelacion)
+        {
+            var contexto = await ArmarContextoAsync(usuarioId, entrenamientoId, cancelacion);
+            if (contexto is null)
+            {
+                return null;
+            }
+
+            var (entrenamiento, cuenta, pares, avisos) = contexto.Value;
+            var porAtleta = pares.ToDictionary(p => p.Vinculo.AtletaId);
+            var trabajosNuevos = 0;
+            var importadas = 0;
+
+            foreach (var pedido in request.Atletas)
+            {
+                if (!porAtleta.TryGetValue(pedido.AtletaId, out var par))
+                {
+                    continue;
+                }
+
+                if (pedido.Actividades.Count == 0)
+                {
+                    continue;
+                }
+
+                var (vinculo, amigo) = par;
+                var delDia = await EjecutarAsync(
+                    cuenta,
+                    access => _garmin.ObtenerActividadesDelDiaAsync(
+                        access,
+                        amigo.DisplayName,
+                        entrenamiento.Fecha,
+                        cancelacion),
+                    cancelacion);
+
+                ActividadGarminLeida? ultima = null;
+                foreach (var seleccion in pedido.Actividades)
+                {
+                    var cruda = delDia.FirstOrDefault(a => a.ActividadId == seleccion.ActividadId);
+                    if (cruda is null)
+                    {
+                        continue;
+                    }
+
+                    var completa = await EjecutarAsync(
+                        cuenta,
+                        access => _garmin.CompletarAsync(access, cruda, cancelacion),
+                        cancelacion);
+
+                    if (await GuardarTrabajoAsync(vinculo, completa, seleccion.IndicesTramos))
+                    {
+                        trabajosNuevos++;
+                    }
+
+                    ultima = completa;
+                    importadas++;
+                }
+
+                if (ultima is not null)
+                {
+                    Copiar(vinculo, ultima);
+                }
+            }
+
+            await _entrenamientos.ActualizarAsync(entrenamiento);
+
+            if (importadas > 0)
+            {
+                avisos.Insert(0, importadas == 1
+                    ? "Se importó 1 actividad de Garmin."
+                    : $"Se importaron {importadas} actividades de Garmin.");
+            }
+
+            if (trabajosNuevos > 0)
+            {
+                avisos.Insert(importadas > 0 ? 1 : 0, trabajosNuevos == 1
+                    ? "Se sumó 1 trabajo al historial."
+                    : $"Se sumaron {trabajosNuevos} trabajos al historial.");
+            }
+
+            if (importadas == 0)
+            {
+                avisos.Insert(0, "No se importó ninguna actividad.");
+            }
+
+            return new SincronizacionGarminDto
+            {
+                Entrenamiento = entrenamiento.ToDto(),
+                Avisos = avisos
+            };
+        }
+
+        /// <summary>
+        /// Resuelve cuenta, amigos y pares atleta-amigo. Comparte avisos de cruces.
+        /// </summary>
+        private async Task<(
+            Entrenamiento Entrenamiento,
+            CuentaGarmin Cuenta,
+            List<(EntrenamientoAtleta Vinculo, AmigoGarmin Amigo)> Pares,
+            List<string> Avisos)?> ArmarContextoAsync(
+            int usuarioId,
+            int entrenamientoId,
+            CancellationToken cancelacion)
+        {
+            var entrenamiento = await _entrenamientos.ObtenerPorIdAsync(entrenamientoId);
+            if (entrenamiento is null)
+            {
+                return null;
+            }
+
+            var cuenta = await _cuentas.ObtenerPorUsuarioAsync(usuarioId)
+                ?? throw new GarminExcepcion("Todavía no vinculaste una cuenta de Garmin.");
+
+            var token = await TokenVigenteAsync(cuenta, cancelacion);
+            var amigos = await EjecutarAsync(
+                cuenta,
+                access => _garmin.ObtenerAmigosAsync(access, cancelacion),
+                cancelacion,
+                token);
+
+            var avisos = new List<string>();
+            var pares = new List<(EntrenamientoAtleta Vinculo, AmigoGarmin Amigo)>();
+
+            foreach (var vinculo in entrenamiento.Atletas)
+            {
+                var coincidencias = amigos
+                    .Where(a => NombresGarmin.Coincide(vinculo.Atleta.Nombre, vinculo.Atleta.Apellido, a.NombreCompleto))
+                    .ToList();
+
+                if (coincidencias.Count > 1)
+                {
+                    avisos.Add($"{vinculo.Atleta.Apellido}, {vinculo.Atleta.Nombre} coincide con más de un amigo de Garmin.");
+                    continue;
+                }
+
+                if (coincidencias.Count == 0)
+                {
+                    continue;
+                }
+
+                pares.Add((vinculo, coincidencias[0]));
+            }
+
+            foreach (var grupo in pares.GroupBy(p => p.Amigo.DisplayName, StringComparer.OrdinalIgnoreCase))
+            {
+                if (grupo.Count() <= 1)
+                {
+                    continue;
+                }
+
+                avisos.Add($"Hay más de un atleta que coincide con {grupo.First().Amigo.NombreCompleto}.");
+                foreach (var duplicado in grupo)
+                {
+                    pares.Remove(duplicado);
+                }
+            }
+
+            if (pares.Count == 0 && avisos.Count == 0)
+            {
+                avisos.Add("Ningún atleta de la sesión coincide con un amigo de Garmin.");
+            }
+
+            return (entrenamiento, cuenta, pares, avisos);
+        }
+
+        private static bool CoincideTipoSesion(string? tipoGarmin, TipoTrabajo tipoSesion) =>
+            tipoSesion switch
+            {
+                TipoTrabajo.Gimnasio => tipoGarmin is "Fuerza",
+                TipoTrabajo.Tierra => tipoGarmin is "Carrera" or "Caminata",
+                TipoTrabajo.Agua => tipoGarmin is "Remo" or "Kayak" or "Natación" or "Ciclismo",
+                _ => false
+            };
+
         private async Task<string> TokenVigenteAsync(CuentaGarmin cuenta, CancellationToken cancelacion)
         {
             if (cuenta.ExpiraUtc <= DateTime.UtcNow.AddMinutes(2))
@@ -666,12 +937,21 @@ namespace Controladores.Integraciones
         }
 
         /// <summary>
-        /// Crea o actualiza el trabajo que sale en el historial. El de Garmin
-        /// se reemplaza al volver a traer; los cargados a mano no se tocan.
+        /// Crea o actualiza el trabajo de esa actividad Garmin. Si vienen
+        /// indices de tramos, solo se guardan esos; si no, todos.
         /// </summary>
-        private async Task<bool> GuardarTrabajoAsync(EntrenamientoAtleta vinculo, ActividadGarminLeida actividad)
+        private async Task<bool> GuardarTrabajoAsync(
+            EntrenamientoAtleta vinculo,
+            ActividadGarminLeida actividad,
+            IReadOnlyList<int>? indicesTramos = null)
         {
             var marcas = Marcas(actividad);
+            if (indicesTramos is { Count: > 0 })
+            {
+                var elegidos = indicesTramos.ToHashSet();
+                marcas = marcas.Where((_, i) => elegidos.Contains(i)).ToList();
+            }
+
             if (marcas.Count == 0 || TipoDe(actividad.Tipo) == TipoTrabajo.Gimnasio)
             {
                 return false;
@@ -692,7 +972,7 @@ namespace Controladores.Integraciones
                 })
                 : [];
 
-            var existente = vinculo.Trabajos.FirstOrDefault(t => t.GarminActividadId is not null);
+            var existente = vinculo.Trabajos.FirstOrDefault(t => t.GarminActividadId == actividad.ActividadId);
             if (existente is null)
             {
                 var trabajo = new Trabajo

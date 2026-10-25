@@ -14,6 +14,10 @@ namespace Controladores.Contratos
 
         Task<ActionResult<SincronizacionGarminDto>> Sincronizar(int entrenamientoId);
 
+        Task<ActionResult<PreviewGarminDto>> Preview(int entrenamientoId);
+
+        Task<ActionResult<SincronizacionGarminDto>> Importar(int entrenamientoId, ImportarGarminRequest request);
+
         Task<ActionResult<CalendarioGarminDto>> Calendario(DateOnly? desde, bool mes);
     }
 }

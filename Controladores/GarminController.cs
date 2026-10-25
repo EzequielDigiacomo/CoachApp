@@ -181,6 +181,83 @@ namespace Controladores
             }
         }
 
+        /// <summary>
+        /// Lista las actividades del dia por atleta, con sus series, sin guardar.
+        /// </summary>
+        [HttpPost("sesiones/{entrenamientoId:int}/preview")]
+        public async Task<ActionResult<PreviewGarminDto>> Preview(int entrenamientoId)
+        {
+            if (Identidad.EsAtleta(User))
+            {
+                return Forbid();
+            }
+
+            var usuarioId = UsuarioActualId();
+            if (usuarioId is null)
+            {
+                return Unauthorized();
+            }
+
+            try
+            {
+                var resultado = await _garmin.PreviewAsync(
+                    usuarioId.Value,
+                    entrenamientoId,
+                    HttpContext.RequestAborted);
+
+                if (resultado is null)
+                {
+                    return NotFound(new { mensaje = "Entrenamiento no encontrado." });
+                }
+
+                return Ok(resultado);
+            }
+            catch (GarminExcepcion ex)
+            {
+                return BadRequest(new { mensaje = ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// Importa las actividades y series elegidas en el preview.
+        /// </summary>
+        [HttpPost("sesiones/{entrenamientoId:int}/importar")]
+        public async Task<ActionResult<SincronizacionGarminDto>> Importar(
+            int entrenamientoId,
+            [FromBody] ImportarGarminRequest request)
+        {
+            if (Identidad.EsAtleta(User))
+            {
+                return Forbid();
+            }
+
+            var usuarioId = UsuarioActualId();
+            if (usuarioId is null)
+            {
+                return Unauthorized();
+            }
+
+            try
+            {
+                var resultado = await _garmin.ImportarAsync(
+                    usuarioId.Value,
+                    entrenamientoId,
+                    request,
+                    HttpContext.RequestAborted);
+
+                if (resultado is null)
+                {
+                    return NotFound(new { mensaje = "Entrenamiento no encontrado." });
+                }
+
+                return Ok(resultado);
+            }
+            catch (GarminExcepcion ex)
+            {
+                return BadRequest(new { mensaje = ex.Message });
+            }
+        }
+
         private int? UsuarioActualId()
         {
             var valor = User.FindFirstValue(ClaimTypes.NameIdentifier)
