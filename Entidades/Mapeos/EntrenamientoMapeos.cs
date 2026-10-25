@@ -37,6 +37,7 @@ namespace Entidades.Mapeos
                 Fecha = entrenamiento.Fecha,
                 Turno = entrenamiento.Turno,
                 Sesion = entrenamiento.Sesion,
+                Tipo = entrenamiento.Tipo,
                 Descripcion = entrenamiento.Descripcion,
                 Club = entrenamiento.Club,
                 FechaCreacion = entrenamiento.FechaCreacion,

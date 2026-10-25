@@ -16,6 +16,8 @@ namespace Entidades.DTOs
 
         public int Sesion { get; set; }
 
+        public TipoTrabajo Tipo { get; set; }
+
         public bool Asistio { get; set; }
     }
 }

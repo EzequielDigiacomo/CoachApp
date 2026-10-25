@@ -17,6 +17,9 @@ namespace Entidades
         /// <summary>Numero de sesion dentro del turno: 1 a 5.</summary>
         public int Sesion { get; set; }
 
+        /// <summary>Gimnasio, tierra (trote) o agua: fija el tipo de los trabajos.</summary>
+        public TipoTrabajo Tipo { get; set; } = TipoTrabajo.Agua;
+
         [MaxLength(500)]
         public string? Descripcion { get; set; }
 

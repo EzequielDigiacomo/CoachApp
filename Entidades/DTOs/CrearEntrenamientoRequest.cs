@@ -16,6 +16,11 @@ namespace Entidades.DTOs
         [Range(1, 5, ErrorMessage = "La sesion tiene que ser un numero del 1 al 5.")]
         public int Sesion { get; set; }
 
+        /// <summary>Gimnasio, tierra o agua. Define el tipo de los trabajos de la sesion.</summary>
+        [Required]
+        [EnumDataType(typeof(TipoTrabajo))]
+        public TipoTrabajo Tipo { get; set; }
+
         [MaxLength(500, ErrorMessage = "La descripcion no puede superar los 500 caracteres.")]
         public string? Descripcion { get; set; }
 

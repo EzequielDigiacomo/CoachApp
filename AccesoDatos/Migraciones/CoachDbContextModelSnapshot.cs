@@ -359,6 +359,11 @@ namespace AccesoDatos.Migraciones
                     b.Property<int>("Sesion")
                         .HasColumnType("integer");
 
+                    b.Property<string>("Tipo")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
                     b.Property<string>("Turno")
                         .IsRequired()
                         .HasMaxLength(20)

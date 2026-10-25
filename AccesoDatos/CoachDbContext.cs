@@ -73,6 +73,7 @@ namespace AccesoDatos
                 entity.ToTable("Entrenamientos");
                 entity.HasKey(e => e.Id);
                 entity.Property(e => e.Turno).HasConversion<string>().HasMaxLength(20);
+                entity.Property(e => e.Tipo).HasConversion<string>().HasMaxLength(20);
 
                 // Un dia, un turno y un numero de sesion identifican una sola sesion.
                 entity.HasIndex(e => new { e.Fecha, e.Turno, e.Sesion }).IsUnique();

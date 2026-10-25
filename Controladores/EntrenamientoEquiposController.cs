@@ -37,6 +37,11 @@ namespace Controladores
                 return NotFound(new { mensaje = "Entrenamiento no encontrado." });
             }
 
+            if (entrenamiento.Tipo != TipoTrabajo.Agua)
+            {
+                return BadRequest(new { mensaje = "Los botes de equipo solo se cargan en sesiones de agua." });
+            }
+
             TipoBote tipo;
             List<int> atletaIds;
             int? catalogoId = null;

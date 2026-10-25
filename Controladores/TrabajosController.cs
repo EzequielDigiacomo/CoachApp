@@ -21,11 +21,16 @@ namespace Controladores
     public class TrabajosController : ControllerBase, ITrabajosController
     {
         private readonly ITrabajoRepositorio _trabajoRepositorio;
+        private readonly IEntrenamientoRepositorio _entrenamientoRepositorio;
         private readonly IUsuarioRepositorio _usuarioRepositorio;
 
-        public TrabajosController(ITrabajoRepositorio trabajoRepositorio, IUsuarioRepositorio usuarioRepositorio)
+        public TrabajosController(
+            ITrabajoRepositorio trabajoRepositorio,
+            IEntrenamientoRepositorio entrenamientoRepositorio,
+            IUsuarioRepositorio usuarioRepositorio)
         {
             _trabajoRepositorio = trabajoRepositorio;
+            _entrenamientoRepositorio = entrenamientoRepositorio;
             _usuarioRepositorio = usuarioRepositorio;
         }
 
@@ -68,11 +73,20 @@ namespace Controladores
                 return NotFound(new { mensaje = "El atleta no está asignado a esa sesión." });
             }
 
+            var entrenamiento = await _entrenamientoRepositorio.ObtenerPorIdAsync(entrenamientoId);
+            if (entrenamiento is null)
+            {
+                return NotFound(new { mensaje = "Entrenamiento no encontrado." });
+            }
+
+            // El tipo lo fija la sesion; el cliente no puede mandar otro.
+            request.Tipo = entrenamiento.Tipo;
+
             var trabajo = new Trabajo
             {
                 EntrenamientoId = entrenamientoId,
                 AtletaId = atletaId,
-                Tipo = request.Tipo!.Value,
+                Tipo = entrenamiento.Tipo,
                 HoraInicio = TiempoTexto.IntentaParseHora(request.HoraInicio, out var hora) ? hora : null,
                 Observaciones = Limpiar(request.Observaciones),
                 FechaCreacion = DateTime.UtcNow
@@ -109,7 +123,14 @@ namespace Controladores
                 return NotFound(new { mensaje = "Trabajo no encontrado." });
             }
 
-            trabajo.Tipo = request.Tipo!.Value;
+            var entrenamiento = await _entrenamientoRepositorio.ObtenerPorIdAsync(entrenamientoId);
+            if (entrenamiento is null)
+            {
+                return NotFound(new { mensaje = "Entrenamiento no encontrado." });
+            }
+
+            request.Tipo = entrenamiento.Tipo;
+            trabajo.Tipo = entrenamiento.Tipo;
             trabajo.HoraInicio = TiempoTexto.IntentaParseHora(request.HoraInicio, out var hora) ? hora : null;
             trabajo.Observaciones = Limpiar(request.Observaciones);
 

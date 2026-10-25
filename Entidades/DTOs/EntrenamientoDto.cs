@@ -12,6 +12,9 @@ namespace Entidades.DTOs
         /// <summary>Numero de sesion dentro del turno: 1 a 5.</summary>
         public int Sesion { get; set; }
 
+        /// <summary>Gimnasio, tierra o agua.</summary>
+        public TipoTrabajo Tipo { get; set; }
+
         public string? Descripcion { get; set; }
         public string? Club { get; set; }
         public DateTime FechaCreacion { get; set; }

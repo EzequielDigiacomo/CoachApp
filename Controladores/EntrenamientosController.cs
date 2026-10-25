@@ -102,6 +102,7 @@ namespace Controladores
                 Fecha = request.Fecha,
                 Turno = request.Turno,
                 Sesion = request.Sesion,
+                Tipo = request.Tipo,
                 Descripcion = Limpiar(request.Descripcion),
                 Club = Limpiar(request.Club),
                 FechaCreacion = DateTime.UtcNow
@@ -147,6 +148,7 @@ namespace Controladores
             entrenamiento.Fecha = request.Fecha;
             entrenamiento.Turno = request.Turno;
             entrenamiento.Sesion = request.Sesion;
+            entrenamiento.Tipo = request.Tipo;
             entrenamiento.Descripcion = Limpiar(request.Descripcion);
             entrenamiento.Club = Limpiar(request.Club);
 
@@ -291,6 +293,7 @@ namespace Controladores
                 Fecha = vinculo.Entrenamiento.Fecha,
                 Turno = vinculo.Entrenamiento.Turno,
                 Sesion = vinculo.Entrenamiento.Sesion,
+                Tipo = vinculo.Entrenamiento.Tipo,
                 Asistio = vinculo.Asistio!.Value
             }));
         }
