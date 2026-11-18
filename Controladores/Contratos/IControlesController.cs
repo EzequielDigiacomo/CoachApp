@@ -20,8 +20,8 @@ namespace Controladores.Contratos
 
         Task<IActionResult> Eliminar(int id);
 
-        Task<ActionResult<IEnumerable<ControlDto>>> MarcarDesdeTrabajo(int trabajoId);
+        Task<ActionResult<IEnumerable<ControlDto>>> MarcarDesdeTrabajo(int trabajoId, [FromQuery] int? atletaId);
 
-        Task<IActionResult> DesmarcarDesdeTrabajo(int trabajoId);
+        Task<IActionResult> DesmarcarDesdeTrabajo(int trabajoId, [FromQuery] int? atletaId);
     }
 }

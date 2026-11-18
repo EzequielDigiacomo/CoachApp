@@ -23,15 +23,18 @@ namespace Controladores
         private readonly IControlRepositorio _controlRepositorio;
         private readonly ITrabajoRepositorio _trabajoRepositorio;
         private readonly IEntrenamientoRepositorio _entrenamientoRepositorio;
+        private readonly IEntrenamientoEquipoRepositorio _entrenamientoEquipos;
 
         public ControlesController(
             IControlRepositorio controlRepositorio,
             ITrabajoRepositorio trabajoRepositorio,
-            IEntrenamientoRepositorio entrenamientoRepositorio)
+            IEntrenamientoRepositorio entrenamientoRepositorio,
+            IEntrenamientoEquipoRepositorio entrenamientoEquipos)
         {
             _controlRepositorio = controlRepositorio;
             _trabajoRepositorio = trabajoRepositorio;
             _entrenamientoRepositorio = entrenamientoRepositorio;
+            _entrenamientoEquipos = entrenamientoEquipos;
         }
 
         /// <summary>Lista controles. Staff: todos o filtrados. Atleta: solo los suyos.</summary>
@@ -160,11 +163,14 @@ namespace Controladores
 
         /// <summary>
         /// Promueve un trabajo de sesion a control(es) del historial del atleta.
+        /// Sirve para trabajos individuales y de bote (en bote hay que pasar atletaId).
         /// Agua/tierra: un control por parcial. Gimnasio: un control con los ejercicios.
         /// </summary>
         [HttpPost("desde-trabajo/{trabajoId:int}")]
         [Authorize(Roles = Identidad.RolesStaff)]
-        public async Task<ActionResult<IEnumerable<ControlDto>>> MarcarDesdeTrabajo(int trabajoId)
+        public async Task<ActionResult<IEnumerable<ControlDto>>> MarcarDesdeTrabajo(
+            int trabajoId,
+            [FromQuery] int? atletaId)
         {
             var trabajo = await _trabajoRepositorio.ObtenerPorIdAsync(trabajoId);
             if (trabajo is null)
@@ -172,12 +178,15 @@ namespace Controladores
                 return NotFound(new { mensaje = "Trabajo no encontrado." });
             }
 
-            if (trabajo.AtletaId is null || trabajo.EntrenamientoEquipoId is not null)
+            var destino = await ResolverAtletaDestino(trabajo, atletaId);
+            if (destino.Result is not null)
             {
-                return BadRequest(new { mensaje = "Solo se pueden marcar trabajos individuales del atleta." });
+                return destino.Result;
             }
 
-            var existentes = await _controlRepositorio.ObtenerPorTrabajoIdAsync(trabajoId);
+            var atletaDestino = destino.Value;
+
+            var existentes = await _controlRepositorio.ObtenerPorTrabajoYAtletaAsync(trabajoId, atletaDestino);
             if (existentes.Count > 0)
             {
                 return Ok(existentes.Select(c => c.ToDto()));
@@ -201,7 +210,7 @@ namespace Controladores
                 {
                     var control = new Control
                     {
-                        AtletaId = trabajo.AtletaId.Value,
+                        AtletaId = atletaDestino,
                         Tipo = trabajo.Tipo,
                         Fecha = entrenamiento.Fecha,
                         DistanciaMetros = parcial.DistanciaMetros,
@@ -226,7 +235,7 @@ namespace Controladores
 
                 var control = new Control
                 {
-                    AtletaId = trabajo.AtletaId.Value,
+                    AtletaId = atletaDestino,
                     Tipo = TipoTrabajo.Gimnasio,
                     Fecha = entrenamiento.Fecha,
                     EsAutoCarga = trabajo.Ejercicios
@@ -261,12 +270,24 @@ namespace Controladores
             return BadRequest(new { mensaje = "Tipo de trabajo no soportado." });
         }
 
-        /// <summary>Quita del historial los controles creados desde ese trabajo.</summary>
+        /// <summary>Quita del historial los controles de ese atleta creados desde el trabajo.</summary>
         [HttpDelete("desde-trabajo/{trabajoId:int}")]
         [Authorize(Roles = Identidad.RolesStaff)]
-        public async Task<IActionResult> DesmarcarDesdeTrabajo(int trabajoId)
+        public async Task<IActionResult> DesmarcarDesdeTrabajo(int trabajoId, [FromQuery] int? atletaId)
         {
-            var controles = await _controlRepositorio.ObtenerPorTrabajoIdAsync(trabajoId);
+            var trabajo = await _trabajoRepositorio.ObtenerPorIdAsync(trabajoId);
+            if (trabajo is null)
+            {
+                return NotFound(new { mensaje = "Trabajo no encontrado." });
+            }
+
+            var destino = await ResolverAtletaDestino(trabajo, atletaId);
+            if (destino.Result is not null)
+            {
+                return destino.Result;
+            }
+
+            var controles = await _controlRepositorio.ObtenerPorTrabajoYAtletaAsync(trabajoId, destino.Value);
             if (controles.Count == 0)
             {
                 return NoContent();
@@ -274,6 +295,42 @@ namespace Controladores
 
             await _controlRepositorio.EliminarRangoAsync(controles);
             return NoContent();
+        }
+
+        /// <summary>
+        /// Individual: usa el dueño del trabajo.
+        /// Bote: exige atletaId y que sea miembro del equipo de la sesion.
+        /// </summary>
+        private async Task<(int Value, ActionResult? Result)> ResolverAtletaDestino(
+            Trabajo trabajo,
+            int? atletaId)
+        {
+            if (trabajo.EntrenamientoEquipoId is int equipoId)
+            {
+                if (atletaId is null)
+                {
+                    return (0, BadRequest(new { mensaje = "Indicá el atleta para marcar el trabajo de equipo." }));
+                }
+
+                if (!await _entrenamientoEquipos.EsMiembroAsync(equipoId, atletaId.Value))
+                {
+                    return (0, BadRequest(new { mensaje = "Ese atleta no remó en este bote." }));
+                }
+
+                return (atletaId.Value, null);
+            }
+
+            if (trabajo.AtletaId is null)
+            {
+                return (0, BadRequest(new { mensaje = "El trabajo no tiene atleta asignado." }));
+            }
+
+            if (atletaId is not null && atletaId != trabajo.AtletaId)
+            {
+                return (0, BadRequest(new { mensaje = "El atleta no coincide con el dueño del trabajo." }));
+            }
+
+            return (trabajo.AtletaId.Value, null);
         }
 
         private async Task<ActionResult?> Ajeno(int atletaId)

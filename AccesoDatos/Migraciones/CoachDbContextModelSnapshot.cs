@@ -282,7 +282,9 @@ namespace AccesoDatos.Migraciones
 
                     b.HasIndex("TrabajoId");
 
-                    b.HasIndex("TrabajoParcialId")
+                    b.HasIndex("TrabajoParcialId");
+
+                    b.HasIndex("AtletaId", "TrabajoParcialId")
                         .IsUnique();
 
                     b.HasIndex("AtletaId", "Tipo", "Fecha");

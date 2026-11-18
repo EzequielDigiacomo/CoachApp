@@ -59,7 +59,7 @@ namespace Controladores
                 .ThenBy(t => t.Id)
                 .ToList();
 
-            var marcados = await _controlRepositorio.IdsTrabajosMarcadosAsync(lista.Select(t => t.Id));
+            var marcados = await _controlRepositorio.IdsTrabajosMarcadosAsync(atletaId, lista.Select(t => t.Id));
             var trabajos = lista.Select(t =>
             {
                 var dto = t.ToDto();
@@ -210,7 +210,7 @@ namespace Controladores
             }
 
             var trabajos = await _trabajoRepositorio.ObtenerHistorialAsync(atletaId);
-            var marcados = await _controlRepositorio.IdsTrabajosMarcadosAsync(trabajos.Select(t => t.Id));
+            var marcados = await _controlRepositorio.IdsTrabajosMarcadosAsync(atletaId, trabajos.Select(t => t.Id));
 
             return Ok(trabajos.Select(t =>
             {

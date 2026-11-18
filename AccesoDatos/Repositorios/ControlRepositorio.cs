@@ -40,7 +40,7 @@ namespace AccesoDatos.Repositorios
         public Task<bool> ExisteAtletaAsync(int atletaId) =>
             _context.Atletas.AnyAsync(a => a.Id == atletaId);
 
-        public async Task<HashSet<int>> IdsTrabajosMarcadosAsync(IEnumerable<int> trabajoIds)
+        public async Task<HashSet<int>> IdsTrabajosMarcadosAsync(int atletaId, IEnumerable<int> trabajoIds)
         {
             var ids = trabajoIds.Distinct().ToList();
             if (ids.Count == 0)
@@ -49,7 +49,10 @@ namespace AccesoDatos.Repositorios
             }
 
             var marcados = await _context.Controles
-                .Where(c => c.TrabajoId != null && ids.Contains(c.TrabajoId.Value))
+                .Where(c =>
+                    c.AtletaId == atletaId
+                    && c.TrabajoId != null
+                    && ids.Contains(c.TrabajoId.Value))
                 .Select(c => c.TrabajoId!.Value)
                 .Distinct()
                 .ToListAsync();
@@ -57,8 +60,8 @@ namespace AccesoDatos.Repositorios
             return marcados.ToHashSet();
         }
 
-        public Task<List<Control>> ObtenerPorTrabajoIdAsync(int trabajoId) =>
-            ConDetalle(_context.Controles.Where(c => c.TrabajoId == trabajoId))
+        public Task<List<Control>> ObtenerPorTrabajoYAtletaAsync(int trabajoId, int atletaId) =>
+            ConDetalle(_context.Controles.Where(c => c.TrabajoId == trabajoId && c.AtletaId == atletaId))
                 .ToListAsync();
 
         public async Task<Control> CrearAsync(Control control, IEnumerable<ControlEjercicio> ejercicios)

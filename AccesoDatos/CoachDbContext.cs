@@ -250,7 +250,8 @@ namespace AccesoDatos
                 entity.Property(c => c.Tipo).HasConversion<string>().HasMaxLength(20);
                 entity.HasIndex(c => new { c.AtletaId, c.Tipo, c.Fecha });
                 entity.HasIndex(c => c.TrabajoId);
-                entity.HasIndex(c => c.TrabajoParcialId).IsUnique();
+                // Un parcial de bote puede marcarse como control para cada remador.
+                entity.HasIndex(c => new { c.AtletaId, c.TrabajoParcialId }).IsUnique();
 
                 entity.HasOne(c => c.Atleta)
                     .WithMany()
