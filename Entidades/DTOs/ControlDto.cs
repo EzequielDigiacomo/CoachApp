@@ -44,6 +44,9 @@ namespace Entidades.DTOs
 
         public DateTime FechaCreacion { get; set; }
 
+        /// <summary>Trabajo de sesion origen, si se marco desde un entrenamiento.</summary>
+        public int? TrabajoId { get; set; }
+
         public List<ControlEjercicioDto> Ejercicios { get; set; } = [];
     }
 

@@ -272,7 +272,18 @@ namespace AccesoDatos.Migraciones
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)");
 
+                    b.Property<int?>("TrabajoId")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("TrabajoParcialId")
+                        .HasColumnType("integer");
+
                     b.HasKey("Id");
+
+                    b.HasIndex("TrabajoId");
+
+                    b.HasIndex("TrabajoParcialId")
+                        .IsUnique();
 
                     b.HasIndex("AtletaId", "Tipo", "Fecha");
 
@@ -876,7 +887,21 @@ namespace AccesoDatos.Migraciones
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("Entidades.Trabajo", "Trabajo")
+                        .WithMany()
+                        .HasForeignKey("TrabajoId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("Entidades.TrabajoParcial", "TrabajoParcial")
+                        .WithMany()
+                        .HasForeignKey("TrabajoParcialId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.Navigation("Atleta");
+
+                    b.Navigation("Trabajo");
+
+                    b.Navigation("TrabajoParcial");
                 });
 
             modelBuilder.Entity("Entidades.ControlEjercicio", b =>

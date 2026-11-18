@@ -19,5 +19,9 @@ namespace Controladores.Contratos
         Task<ActionResult<ControlDto>> Actualizar(int id, [FromBody] GuardarControlRequest request);
 
         Task<IActionResult> Eliminar(int id);
+
+        Task<ActionResult<IEnumerable<ControlDto>>> MarcarDesdeTrabajo(int trabajoId);
+
+        Task<IActionResult> DesmarcarDesdeTrabajo(int trabajoId);
     }
 }

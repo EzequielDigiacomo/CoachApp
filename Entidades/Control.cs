@@ -42,6 +42,19 @@ namespace Entidades
 
         public DateTime FechaCreacion { get; set; } = DateTime.UtcNow;
 
+        /// <summary>
+        /// Trabajo de sesion desde el que se promovio este control.
+        /// Si se borra el trabajo, el control queda (historial) y el vinculo se anula.
+        /// </summary>
+        public int? TrabajoId { get; set; }
+        public Trabajo? Trabajo { get; set; }
+
+        /// <summary>
+        /// Parcial concreto (agua/tierra). Unico: un parcial no genera dos controles.
+        /// </summary>
+        public int? TrabajoParcialId { get; set; }
+        public TrabajoParcial? TrabajoParcial { get; set; }
+
         public ICollection<ControlEjercicio> Ejercicios { get; set; } = new List<ControlEjercicio>();
     }
 }

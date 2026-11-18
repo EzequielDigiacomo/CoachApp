@@ -249,11 +249,24 @@ namespace AccesoDatos
                 entity.HasKey(c => c.Id);
                 entity.Property(c => c.Tipo).HasConversion<string>().HasMaxLength(20);
                 entity.HasIndex(c => new { c.AtletaId, c.Tipo, c.Fecha });
+                entity.HasIndex(c => c.TrabajoId);
+                entity.HasIndex(c => c.TrabajoParcialId).IsUnique();
 
                 entity.HasOne(c => c.Atleta)
                     .WithMany()
                     .HasForeignKey(c => c.AtletaId)
                     .OnDelete(DeleteBehavior.Cascade);
+
+                // Si se borra el trabajo, el control sigue en el historial.
+                entity.HasOne(c => c.Trabajo)
+                    .WithMany()
+                    .HasForeignKey(c => c.TrabajoId)
+                    .OnDelete(DeleteBehavior.SetNull);
+
+                entity.HasOne(c => c.TrabajoParcial)
+                    .WithMany()
+                    .HasForeignKey(c => c.TrabajoParcialId)
+                    .OnDelete(DeleteBehavior.SetNull);
             });
 
             modelBuilder.Entity<ControlEjercicio>(entity =>

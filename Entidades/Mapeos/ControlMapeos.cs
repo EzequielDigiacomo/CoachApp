@@ -39,6 +39,7 @@ namespace Entidades.Mapeos
                 DiferenciaTestigo = diferencia,
                 Observaciones = control.Observaciones,
                 FechaCreacion = control.FechaCreacion,
+                TrabajoId = control.TrabajoId,
                 Ejercicios = control.Ejercicios
                     .OrderBy(e => e.Orden)
                     .Select(e => new ControlEjercicioDto

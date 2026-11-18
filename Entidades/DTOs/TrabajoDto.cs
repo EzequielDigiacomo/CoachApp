@@ -48,5 +48,8 @@ namespace Entidades.DTOs
         public Turno? EntrenamientoTurno { get; set; }
 
         public int? EntrenamientoSesion { get; set; }
+
+        /// <summary>True cuando el trabajo ya fue promovido a control(es) del historial.</summary>
+        public bool EsControl { get; set; }
     }
 }

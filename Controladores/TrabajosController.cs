@@ -23,15 +23,18 @@ namespace Controladores
         private readonly ITrabajoRepositorio _trabajoRepositorio;
         private readonly IEntrenamientoRepositorio _entrenamientoRepositorio;
         private readonly IUsuarioRepositorio _usuarioRepositorio;
+        private readonly IControlRepositorio _controlRepositorio;
 
         public TrabajosController(
             ITrabajoRepositorio trabajoRepositorio,
             IEntrenamientoRepositorio entrenamientoRepositorio,
-            IUsuarioRepositorio usuarioRepositorio)
+            IUsuarioRepositorio usuarioRepositorio,
+            IControlRepositorio controlRepositorio)
         {
             _trabajoRepositorio = trabajoRepositorio;
             _entrenamientoRepositorio = entrenamientoRepositorio;
             _usuarioRepositorio = usuarioRepositorio;
+            _controlRepositorio = controlRepositorio;
         }
 
         /// <summary>Lista los trabajos del atleta en esa sesion, del mas temprano al mas tarde.</summary>
@@ -50,11 +53,19 @@ namespace Controladores
 
             var propios = await _trabajoRepositorio.ObtenerPorAtletaAsync(entrenamientoId, atletaId);
             var deBote = await _trabajoRepositorio.ObtenerDeEquiposPorAtletaAsync(entrenamientoId, atletaId);
-            var trabajos = propios
+            var lista = propios
                 .Concat(deBote)
                 .OrderBy(t => t.HoraInicio)
                 .ThenBy(t => t.Id)
-                .Select(t => t.ToDto());
+                .ToList();
+
+            var marcados = await _controlRepositorio.IdsTrabajosMarcadosAsync(lista.Select(t => t.Id));
+            var trabajos = lista.Select(t =>
+            {
+                var dto = t.ToDto();
+                dto.EsControl = marcados.Contains(t.Id);
+                return dto;
+            });
 
             return Ok(trabajos);
         }
@@ -199,8 +210,14 @@ namespace Controladores
             }
 
             var trabajos = await _trabajoRepositorio.ObtenerHistorialAsync(atletaId);
+            var marcados = await _controlRepositorio.IdsTrabajosMarcadosAsync(trabajos.Select(t => t.Id));
 
-            return Ok(trabajos.Select(t => t.ToDto()));
+            return Ok(trabajos.Select(t =>
+            {
+                var dto = t.ToDto();
+                dto.EsControl = marcados.Contains(t.Id);
+                return dto;
+            }));
         }
 
         /// <summary>
