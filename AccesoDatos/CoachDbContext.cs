@@ -24,6 +24,7 @@ namespace AccesoDatos
         public DbSet<Anotacion> Anotaciones => Set<Anotacion>();
         public DbSet<AnotacionAtleta> AnotacionesAtleta => Set<AnotacionAtleta>();
         public DbSet<Sensacion> Sensaciones => Set<Sensacion>();
+        public DbSet<Aviso> Avisos => Set<Aviso>();
         public DbSet<Trabajo> Trabajos => Set<Trabajo>();
         public DbSet<TrabajoParcial> TrabajoParciales => Set<TrabajoParcial>();
         public DbSet<TrabajoEjercicio> TrabajoEjercicios => Set<TrabajoEjercicio>();
@@ -304,6 +305,17 @@ namespace AccesoDatos
                     .WithMany()
                     .HasForeignKey(s => s.AtletaId)
                     .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            modelBuilder.Entity<Aviso>(entity =>
+            {
+                entity.ToTable("Avisos");
+                entity.HasKey(a => a.Id);
+                entity.Property(a => a.Titulo).HasMaxLength(120);
+                entity.Property(a => a.Texto).HasMaxLength(1000);
+                entity.Property(a => a.Link).HasMaxLength(500);
+                entity.HasIndex(a => a.FechaCreacion);
+                entity.HasIndex(a => a.Activo);
             });
 
             modelBuilder.Entity<Anotacion>(entity =>

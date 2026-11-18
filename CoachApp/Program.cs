@@ -54,6 +54,7 @@ builder.Services.AddScoped<IEntrenamientoEquipoRepositorio, EntrenamientoEquipoR
 builder.Services.AddScoped<IAnotacionRepositorio, AnotacionRepositorio>();
 builder.Services.AddScoped<IAnotacionAtletaRepositorio, AnotacionAtletaRepositorio>();
 builder.Services.AddScoped<ISensacionRepositorio, SensacionRepositorio>();
+builder.Services.AddScoped<IAvisoRepositorio, AvisoRepositorio>();
 builder.Services.AddScoped<ICuentaGarminRepositorio, CuentaGarminRepositorio>();
 builder.Services.AddScoped<PasswordServicio>();
 builder.Services.AddScoped<ITokenServicio, TokenServicio>();
