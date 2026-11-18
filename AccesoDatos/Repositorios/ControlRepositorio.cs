@@ -60,6 +60,35 @@ namespace AccesoDatos.Repositorios
             return marcados.ToHashSet();
         }
 
+        public async Task<HashSet<int>> IdsTrabajosMarcadosParaTodosAsync(
+            IEnumerable<int> trabajoIds,
+            IReadOnlyList<int> atletaIds)
+        {
+            var ids = trabajoIds.Distinct().ToList();
+            if (ids.Count == 0 || atletaIds.Count == 0)
+            {
+                return [];
+            }
+
+            var grupos = await _context.Controles
+                .Where(c =>
+                    c.TrabajoId != null
+                    && ids.Contains(c.TrabajoId.Value)
+                    && atletaIds.Contains(c.AtletaId))
+                .GroupBy(c => c.TrabajoId!.Value)
+                .Select(g => new
+                {
+                    TrabajoId = g.Key,
+                    Atletas = g.Select(c => c.AtletaId).Distinct().Count()
+                })
+                .ToListAsync();
+
+            return grupos
+                .Where(g => g.Atletas >= atletaIds.Count)
+                .Select(g => g.TrabajoId)
+                .ToHashSet();
+        }
+
         public Task<List<Control>> ObtenerPorTrabajoYAtletaAsync(int trabajoId, int atletaId) =>
             ConDetalle(_context.Controles.Where(c => c.TrabajoId == trabajoId && c.AtletaId == atletaId))
                 .ToListAsync();

@@ -19,15 +19,18 @@ namespace Controladores
         private readonly ITrabajoRepositorio _trabajos;
         private readonly IEntrenamientoEquipoRepositorio _equipos;
         private readonly IUsuarioRepositorio _usuarios;
+        private readonly IControlRepositorio _controles;
 
         public TrabajosEquipoController(
             ITrabajoRepositorio trabajos,
             IEntrenamientoEquipoRepositorio equipos,
-            IUsuarioRepositorio usuarios)
+            IUsuarioRepositorio usuarios,
+            IControlRepositorio controles)
         {
             _trabajos = trabajos;
             _equipos = equipos;
             _usuarios = usuarios;
+            _controles = controles;
         }
 
         [HttpGet]
@@ -43,8 +46,19 @@ namespace Controladores
                 return rechazo;
             }
 
-            var trabajos = await _trabajos.ObtenerPorEquipoAsync(entrenamientoEquipoId);
-            return Ok(trabajos.Select(t => t.ToDto()));
+            var equipo = await _equipos.ObtenerAsync(entrenamientoEquipoId);
+            var atletaIds = equipo?.Miembros.Select(m => m.AtletaId).ToList() ?? [];
+            var lista = await _trabajos.ObtenerPorEquipoAsync(entrenamientoEquipoId);
+            var marcados = await _controles.IdsTrabajosMarcadosParaTodosAsync(
+                lista.Select(t => t.Id),
+                atletaIds);
+
+            return Ok(lista.Select(t =>
+            {
+                var dto = t.ToDto();
+                dto.EsControl = marcados.Contains(t.Id);
+                return dto;
+            }));
         }
 
         [HttpPost]
