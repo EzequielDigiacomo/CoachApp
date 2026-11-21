@@ -13,15 +13,18 @@ namespace AccesoDatos.Repositorios
             _context = context;
         }
 
-        public async Task<List<Entrenamiento>> ObtenerAsync(
+        public async Task<ResultadoPaginado<Entrenamiento>> ObtenerAsync(
             DateOnly? desde,
             DateOnly? hasta,
             Turno? turno,
-            int? sesion)
+            int? sesion,
+            int? atletaId,
+            int? pagina,
+            int? tamano)
         {
-            // El listado necesita los atletas para contar, pero no sus trabajos:
-            // esos solo hacen falta en el detalle.
+            // Listado: solo atletas para contar/filtrar; sin trabajos ni series.
             var query = _context.Entrenamientos
+                .AsNoTracking()
                 .Include(e => e.Atletas)
                     .ThenInclude(ea => ea.Atleta)
                 .AsQueryable();
@@ -46,21 +49,25 @@ namespace AccesoDatos.Repositorios
                 query = query.Where(e => e.Sesion == sesion);
             }
 
-            // Lo ultimo cargado primero: el dia de hoy arriba y el mas viejo abajo.
-            // Dentro del mismo dia, las sesiones siguen en orden (manana 1, luego 2).
-            return await query
+            if (atletaId is not null)
+            {
+                query = query.Where(e => e.Atletas.Any(a => a.AtletaId == atletaId));
+            }
+
+            query = query
                 .OrderByDescending(e => e.Fecha)
                 .ThenBy(e => e.Turno)
-                .ThenBy(e => e.Sesion)
-                .ToListAsync();
+                .ThenBy(e => e.Sesion);
+
+            return await ConsultaPaginada.EjecutarAsync(query, pagina, tamano);
         }
 
         public Task<Entrenamiento?> ObtenerPorIdAsync(int id) =>
             _context.Entrenamientos
+                .AsSplitQuery()
                 .Include(e => e.Atletas)
                     .ThenInclude(ea => ea.Atleta)
-                // El detalle muestra un resumen de lo cargado en la fila del atleta:
-                // hacen falta los parciales y los ejercicios con sus series.
+                // Resumen en la fila del atleta: parciales y ejercicios con series.
                 .Include(e => e.Atletas)
                     .ThenInclude(ea => ea.Trabajos)
                         .ThenInclude(t => t.Parciales)
@@ -80,6 +87,18 @@ namespace AccesoDatos.Repositorios
                             .ThenInclude(ej => ej.Series)
                 .FirstOrDefaultAsync(e => e.Id == id);
 
+        /// <summary>Detalle liviano: atletas y equipos sin grafos de trabajos.</summary>
+        public Task<Entrenamiento?> ObtenerResumenPorIdAsync(int id) =>
+            _context.Entrenamientos
+                .AsNoTracking()
+                .AsSplitQuery()
+                .Include(e => e.Atletas)
+                    .ThenInclude(ea => ea.Atleta)
+                .Include(e => e.Equipos)
+                    .ThenInclude(eq => eq.Miembros)
+                        .ThenInclude(m => m.Atleta)
+                .FirstOrDefaultAsync(e => e.Id == id);
+
         public Task<bool> ExisteSlotAsync(DateOnly fecha, Turno turno, int sesion, int? excluirId = null) =>
             _context.Entrenamientos.AnyAsync(e =>
                 e.Fecha == fecha &&
@@ -94,10 +113,10 @@ namespace AccesoDatos.Repositorios
             return entrenamiento;
         }
 
-        public async Task ActualizarAsync(Entrenamiento entrenamiento)
+        public Task ActualizarAsync(Entrenamiento entrenamiento)
         {
             _context.Entrenamientos.Update(entrenamiento);
-            await _context.SaveChangesAsync();
+            return _context.SaveChangesAsync();
         }
 
         public async Task EliminarAsync(Entrenamiento entrenamiento)
@@ -106,28 +125,26 @@ namespace AccesoDatos.Repositorios
             await _context.SaveChangesAsync();
         }
 
-        public Task<List<int>> FiltrarAtletasValidosAsync(IEnumerable<int> atletaIds)
+        public async Task<List<int>> FiltrarAtletasValidosAsync(IEnumerable<int> atletaIds)
         {
             var ids = atletaIds.Distinct().ToList();
-
-            return _context.Atletas
-                .Where(a => a.Activo && ids.Contains(a.Id))
+            return await _context.Atletas
+                .AsNoTracking()
+                .Where(a => ids.Contains(a.Id) && a.Activo)
                 .Select(a => a.Id)
                 .ToListAsync();
         }
 
         public async Task AgregarAtletasAsync(Entrenamiento entrenamiento, IEnumerable<int> atletaIds)
         {
-            var existentes = entrenamiento.Atletas
-                .Select(a => a.AtletaId)
-                .ToHashSet();
-
-            var nuevos = atletaIds
-                .Distinct()
-                .Where(id => !existentes.Contains(id));
-
-            foreach (var atletaId in nuevos)
+            var existentes = entrenamiento.Atletas.Select(a => a.AtletaId).ToHashSet();
+            foreach (var atletaId in atletaIds.Distinct())
             {
+                if (existentes.Contains(atletaId))
+                {
+                    continue;
+                }
+
                 entrenamiento.Atletas.Add(new EntrenamientoAtleta
                 {
                     EntrenamientoId = entrenamiento.Id,
@@ -142,7 +159,6 @@ namespace AccesoDatos.Repositorios
         {
             var vinculo = await _context.EntrenamientoAtletas
                 .FirstOrDefaultAsync(ea => ea.EntrenamientoId == entrenamientoId && ea.AtletaId == atletaId);
-
             if (vinculo is null)
             {
                 return false;
@@ -157,7 +173,6 @@ namespace AccesoDatos.Repositorios
         {
             var vinculo = await _context.EntrenamientoAtletas
                 .FirstOrDefaultAsync(ea => ea.EntrenamientoId == entrenamientoId && ea.AtletaId == atletaId);
-
             if (vinculo is null)
             {
                 return false;
@@ -170,11 +185,12 @@ namespace AccesoDatos.Repositorios
 
         public Task<List<EntrenamientoAtleta>> ObtenerHistorialAsistenciaAsync(int atletaId) =>
             _context.EntrenamientoAtletas
-                .Where(ea => ea.AtletaId == atletaId && ea.Asistio != null)
+                .AsNoTracking()
                 .Include(ea => ea.Entrenamiento)
+                .Where(ea => ea.AtletaId == atletaId && ea.Asistio != null)
                 .OrderByDescending(ea => ea.Entrenamiento.Fecha)
-                .ThenByDescending(ea => ea.Entrenamiento.Turno)
-                .ThenByDescending(ea => ea.Entrenamiento.Sesion)
+                .ThenBy(ea => ea.Entrenamiento.Turno)
+                .ThenBy(ea => ea.Entrenamiento.Sesion)
                 .ToListAsync();
     }
 }

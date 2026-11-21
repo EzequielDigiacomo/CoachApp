@@ -15,6 +15,7 @@ namespace AccesoDatos.Repositorios
         public Task<List<Sensacion>> ListarAsync(int? atletaId)
         {
             var consulta = _context.Sensaciones
+                .AsNoTracking()
                 .Include(s => s.Atleta)
                 .AsQueryable();
 
@@ -25,6 +26,7 @@ namespace AccesoDatos.Repositorios
 
             return consulta
                 .OrderByDescending(s => s.FechaCreacion)
+                .Take(Entidades.Util.Paginacion.TamanoMaximo)
                 .ToListAsync();
         }
 

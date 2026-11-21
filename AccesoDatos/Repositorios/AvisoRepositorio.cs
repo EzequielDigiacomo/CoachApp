@@ -14,7 +14,7 @@ namespace AccesoDatos.Repositorios
 
         public Task<List<Aviso>> ListarAsync(bool soloActivos)
         {
-            var consulta = _context.Avisos.AsQueryable();
+            var consulta = _context.Avisos.AsNoTracking();
 
             if (soloActivos)
             {
@@ -23,6 +23,7 @@ namespace AccesoDatos.Repositorios
 
             return consulta
                 .OrderByDescending(a => a.FechaCreacion)
+                .Take(Entidades.Util.Paginacion.TamanoMaximo)
                 .ToListAsync();
         }
 

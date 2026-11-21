@@ -15,7 +15,7 @@ namespace AccesoDatos.Repositorios
 
         public Task<List<Control>> ObtenerAsync(int? atletaId, TipoTrabajo? tipo)
         {
-            var consulta = ConDetalle(_context.Controles.AsQueryable());
+            var consulta = ConDetalle(_context.Controles.AsNoTracking());
 
             if (atletaId is not null)
             {
@@ -30,11 +30,12 @@ namespace AccesoDatos.Repositorios
             return consulta
                 .OrderByDescending(c => c.Fecha)
                 .ThenByDescending(c => c.Id)
+                .Take(Entidades.Util.Paginacion.TamanoMaximo)
                 .ToListAsync();
         }
 
         public Task<Control?> ObtenerPorIdAsync(int id) =>
-            ConDetalle(_context.Controles.Where(c => c.Id == id))
+            ConDetalle(_context.Controles.AsNoTracking().Where(c => c.Id == id))
                 .FirstOrDefaultAsync();
 
         public Task<bool> ExisteAtletaAsync(int atletaId) =>

@@ -15,7 +15,7 @@ namespace AccesoDatos.Repositorios
 
         public Task<List<Equipo>> ListarAsync(bool incluirInactivos = false)
         {
-            var consulta = ConMiembros(_context.Equipos);
+            var consulta = ConMiembros(_context.Equipos.AsNoTracking());
             if (!incluirInactivos)
             {
                 consulta = consulta.Where(e => e.Activo);
@@ -24,6 +24,7 @@ namespace AccesoDatos.Repositorios
             return consulta
                 .OrderBy(e => e.Tipo)
                 .ThenBy(e => e.Id)
+                .Take(Entidades.Util.Paginacion.TamanoMaximo)
                 .ToListAsync();
         }
 

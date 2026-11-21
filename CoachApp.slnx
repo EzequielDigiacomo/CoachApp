@@ -11,4 +11,5 @@
   <Folder Name="/04.Entidades/">
     <Project Path="Entidades/Entidades.csproj" />
   </Folder>
+  <Project Path="CoachApp.Tests/CoachApp.Tests.csproj" />
 </Solution>

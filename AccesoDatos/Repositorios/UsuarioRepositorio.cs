@@ -20,7 +20,7 @@ namespace AccesoDatos.Repositorios
             _context.Usuarios.FirstOrDefaultAsync(u => u.NombreUsuario == nombreUsuario);
 
         public Task<List<Usuario>> ObtenerTodosAsync() =>
-            _context.Usuarios.OrderBy(u => u.NombreUsuario).ToListAsync();
+            _context.Usuarios.AsNoTracking().OrderBy(u => u.NombreUsuario).ToListAsync();
 
         public Task<bool> ExisteNombreUsuarioAsync(string nombreUsuario) =>
             _context.Usuarios.AnyAsync(u => u.NombreUsuario == nombreUsuario);

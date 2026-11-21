@@ -26,6 +26,10 @@ packages/
 *.log
 *.tmp
 
+## Secretos locales (User Secrets / overrides)
+appsettings.*.local.json
+secrets.json
+
 ## Vite / Node (CoachApp.Web si aplica)
 node_modules/
 dist/

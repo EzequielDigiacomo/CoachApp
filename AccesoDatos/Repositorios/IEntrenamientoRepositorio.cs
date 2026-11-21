@@ -5,16 +5,22 @@ namespace AccesoDatos.Repositorios
 {
     public interface IEntrenamientoRepositorio
     {
-        /// <summary>Lista sesiones por rango de fechas, turno y numero de sesion.</summary>
-        Task<List<Entrenamiento>> ObtenerAsync(DateOnly? desde, DateOnly? hasta, Turno? turno, int? sesion);
+        /// <summary>Lista sesiones filtradas y paginadas. atletaId limita en SQL.</summary>
+        Task<ResultadoPaginado<Entrenamiento>> ObtenerAsync(
+            DateOnly? desde,
+            DateOnly? hasta,
+            Turno? turno,
+            int? sesion,
+            int? atletaId,
+            int? pagina,
+            int? tamano);
 
-        /// <summary>Trae la sesion con los atletas asignados.</summary>
+        /// <summary>Trae la sesion con atletas, equipos y trabajos (detalle completo).</summary>
         Task<Entrenamiento?> ObtenerPorIdAsync(int id);
 
-        /// <summary>
-        /// Busca otra sesion que ocupe el mismo dia, turno y numero de sesion.
-        /// Se usa para impedir duplicados.
-        /// </summary>
+        /// <summary>Detalle sin grafos de trabajos (asistencia / cabecera).</summary>
+        Task<Entrenamiento?> ObtenerResumenPorIdAsync(int id);
+
         Task<bool> ExisteSlotAsync(DateOnly fecha, Turno turno, int sesion, int? excluirId = null);
 
         Task<Entrenamiento> CrearAsync(Entrenamiento entrenamiento);
@@ -23,22 +29,14 @@ namespace AccesoDatos.Repositorios
 
         Task EliminarAsync(Entrenamiento entrenamiento);
 
-        /// <summary>Devuelve los ids de atletas que existen y estan activos.</summary>
         Task<List<int>> FiltrarAtletasValidosAsync(IEnumerable<int> atletaIds);
 
-        /// <summary>Suma atletas a la sesion, salteando los que ya estaban.</summary>
         Task AgregarAtletasAsync(Entrenamiento entrenamiento, IEnumerable<int> atletaIds);
 
-        /// <summary>Quita un atleta de la sesion. Devuelve false si no estaba.</summary>
         Task<bool> QuitarAtletaAsync(int entrenamientoId, int atletaId);
 
-        /// <summary>Marca la asistencia de un atleta. Devuelve false si no pertenece a la sesion.</summary>
         Task<bool> MarcarAsistenciaAsync(int entrenamientoId, int atletaId, bool? asistio);
 
-        /// <summary>
-        /// Sesiones en las que el atleta tiene asistencia marcada, de la mas
-        /// nueva a la mas vieja. El presente y el ausente entran; sin marcar, no.
-        /// </summary>
         Task<List<EntrenamientoAtleta>> ObtenerHistorialAsistenciaAsync(int atletaId);
     }
 }

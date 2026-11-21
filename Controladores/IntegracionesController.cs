@@ -1,19 +1,21 @@
 using Controladores.Contratos;
 using Controladores.Integraciones;
+using Controladores.Seguridad;
 using Entidades.DTOs;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace Controladores
 {
     /// <summary>
     /// Lee datos de fuentes externas. Hoy: planillas de Google Sheets, para
-    /// traer la descripcion de una sesion tal como esta escrita. Requiere
-    /// estar autenticado.
+    /// traer la descripcion de una sesion tal como esta escrita. Solo staff.
     /// </summary>
     [ApiController]
     [Route("api/integraciones")]
-    [Authorize]
+    [Authorize(Roles = Identidad.RolesStaff)]
+    [EnableRateLimiting("integraciones")]
     public class IntegracionesController : ControllerBase, IIntegracionesController
     {
         private readonly ILectorHojasGoogle _lector;

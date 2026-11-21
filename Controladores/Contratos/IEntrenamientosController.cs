@@ -13,7 +13,9 @@ namespace Controladores.Contratos
             DateOnly? desde,
             DateOnly? hasta,
             Turno? turno,
-            int? sesion);
+            int? sesion,
+            int? pagina,
+            int? tamano);
 
         Task<ActionResult<EntrenamientoDto>> ObtenerPorId(int id);
 

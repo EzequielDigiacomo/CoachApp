@@ -6,6 +6,7 @@ using Entidades.DTOs;
 using Entidades.Mapeos;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace Controladores
 {
@@ -30,6 +31,7 @@ namespace Controladores
         /// <summary>Inicia sesion y devuelve el token JWT.</summary>
         [HttpPost("login")]
         [AllowAnonymous]
+        [EnableRateLimiting("login")]
         public async Task<ActionResult<LoginResponse>> Login([FromBody] LoginRequest request)
         {
             var usuario = await _usuarioRepositorio.ObtenerPorNombreUsuarioAsync(request.NombreUsuario);

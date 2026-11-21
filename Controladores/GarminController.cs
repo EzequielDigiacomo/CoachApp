@@ -8,6 +8,7 @@ using Entidades.DTOs;
 using Entidades.Enums;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace Controladores
 {
@@ -18,6 +19,7 @@ namespace Controladores
     [ApiController]
     [Route("api/garmin")]
     [Authorize]
+    [EnableRateLimiting("integraciones")]
     public class GarminController : ControllerBase, IGarminController
     {
         private readonly IGarminServicio _garmin;

@@ -18,7 +18,7 @@ namespace AccesoDatos.Repositorios
             int? trabajoId,
             string? busqueda)
         {
-            var query = _context.Anotaciones.AsQueryable();
+            var query = _context.Anotaciones.AsNoTracking();
 
             if (atletaId is not null)
             {
@@ -47,6 +47,7 @@ namespace AccesoDatos.Repositorios
             return await ConVinculos(query)
                 .OrderByDescending(a => a.FechaCreacion)
                 .ThenByDescending(a => a.Id)
+                .Take(Entidades.Util.Paginacion.TamanoMaximo)
                 .ToListAsync();
         }
 

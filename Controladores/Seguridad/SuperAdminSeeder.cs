@@ -37,13 +37,19 @@ namespace Controladores.Seguridad
                 return;
             }
 
-            var nombreUsuario = _configuracion["SuperAdmin:NombreUsuario"] ?? "superadmin";
-            var password = _configuracion["SuperAdmin:Password"] ?? "Cambiar123!";
+            var nombreUsuario = _configuracion["SuperAdmin:NombreUsuario"];
+            var password = _configuracion["SuperAdmin:Password"];
+            if (string.IsNullOrWhiteSpace(nombreUsuario) || string.IsNullOrWhiteSpace(password))
+            {
+                _logger.LogWarning(
+                    "No hay SuperAdmin en la base y faltan SuperAdmin:NombreUsuario/Password. No se crea la cuenta inicial.");
+                return;
+            }
 
             var admin = new Usuario
             {
                 NombreUsuario = nombreUsuario,
-                Email = _configuracion["SuperAdmin:Email"] ?? "superadmin@coachapp.local",
+                Email = _configuracion["SuperAdmin:Email"] ?? $"{nombreUsuario}@coachapp.local",
                 Nombre = "Super",
                 Apellido = "Admin",
                 Rol = RolUsuario.SuperAdmin,

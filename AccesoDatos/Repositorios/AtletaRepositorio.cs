@@ -14,7 +14,7 @@ namespace AccesoDatos.Repositorios
 
         public async Task<List<Atleta>> ObtenerTodosAsync(string? busqueda, bool incluirInactivos)
         {
-            var query = _context.Atletas.AsQueryable();
+            var query = _context.Atletas.AsNoTracking();
 
             if (!incluirInactivos)
             {
@@ -34,14 +34,15 @@ namespace AccesoDatos.Repositorios
             return await query
                 .OrderBy(a => a.Apellido)
                 .ThenBy(a => a.Nombre)
+                .Take(Entidades.Util.Paginacion.TamanoMaximo)
                 .ToListAsync();
         }
 
         public Task<Atleta?> ObtenerPorIdAsync(int id) =>
-            _context.Atletas.FirstOrDefaultAsync(a => a.Id == id);
+            _context.Atletas.AsNoTracking().FirstOrDefaultAsync(a => a.Id == id);
 
         public Task<Atleta?> ObtenerPorDniAsync(string dni) =>
-            _context.Atletas.FirstOrDefaultAsync(a => a.Dni == dni);
+            _context.Atletas.AsNoTracking().FirstOrDefaultAsync(a => a.Dni == dni);
 
         public Task<bool> ExisteDniAsync(string dni, int? excluirId = null) =>
             _context.Atletas.AnyAsync(a => a.Dni == dni && (excluirId == null || a.Id != excluirId));
@@ -63,6 +64,7 @@ namespace AccesoDatos.Repositorios
         {
             var lista = ids.Distinct().ToList();
             return _context.Atletas
+                .AsNoTracking()
                 .Where(a => lista.Contains(a.Id))
                 .ToListAsync();
         }

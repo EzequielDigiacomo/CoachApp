@@ -13,21 +13,21 @@ namespace AccesoDatos.Repositorios
         }
 
         public Task<List<Trabajo>> ObtenerPorAtletaAsync(int entrenamientoId, int atletaId) =>
-            ConDetalle(_context.Trabajos
+            ConDetalle(_context.Trabajos.AsNoTracking()
                 .Where(t => t.EntrenamientoId == entrenamientoId && t.AtletaId == atletaId))
                 .OrderBy(t => t.HoraInicio)
                 .ThenBy(t => t.Id)
                 .ToListAsync();
 
         public Task<List<Trabajo>> ObtenerPorEquipoAsync(int entrenamientoEquipoId) =>
-            ConDetalle(_context.Trabajos
+            ConDetalle(_context.Trabajos.AsNoTracking()
                 .Where(t => t.EntrenamientoEquipoId == entrenamientoEquipoId))
                 .OrderBy(t => t.HoraInicio)
                 .ThenBy(t => t.Id)
                 .ToListAsync();
 
         public Task<List<Trabajo>> ObtenerDeEquiposPorAtletaAsync(int entrenamientoId, int atletaId) =>
-            ConDetalle(_context.Trabajos
+            ConDetalle(_context.Trabajos.AsNoTracking()
                 .Where(t =>
                     t.EntrenamientoId == entrenamientoId
                     && t.EntrenamientoEquipoId != null
@@ -41,7 +41,7 @@ namespace AccesoDatos.Repositorios
                 .FirstOrDefaultAsync();
 
         public Task<List<Trabajo>> ObtenerHistorialAsync(int atletaId) =>
-            ConDetalle(_context.Trabajos.Where(t => t.AtletaId == atletaId))
+            ConDetalle(_context.Trabajos.AsNoTracking().Where(t => t.AtletaId == atletaId))
                 // Las sesiones, de la mas nueva a la mas vieja.
                 .OrderByDescending(t => t.EntrenamientoAtleta!.Entrenamiento.Fecha)
                 .ThenByDescending(t => t.EntrenamientoAtleta!.Entrenamiento.Turno)
@@ -49,6 +49,7 @@ namespace AccesoDatos.Repositorios
                 // Dentro de la sesion, los trabajos en el orden en que se hicieron.
                 .ThenBy(t => t.HoraInicio)
                 .ThenBy(t => t.Id)
+                .Take(Entidades.Util.Paginacion.TamanoMaximo)
                 .ToListAsync();
 
         public Task<bool> ExisteVinculoAsync(int entrenamientoId, int atletaId) =>

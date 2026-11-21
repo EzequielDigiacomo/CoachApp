@@ -1,0 +1,21 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master, develop]
+  pull_request:
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+      - name: Restore
+        run: dotnet restore CoachApp.slnx
+      - name: Build
+        run: dotnet build CoachApp.slnx --no-restore -c Release
+      - name: Test
+        run: dotnet test CoachApp.Tests/CoachApp.Tests.csproj --no-build -c Release --verbosity normal

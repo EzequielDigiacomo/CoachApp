@@ -1,9 +1,9 @@
 using AccesoDatos.Repositorios;
 using Controladores.Contratos;
+using Controladores.Seguridad;
 using Entidades;
 using Entidades.DTOs;
 using Entidades.Enums;
-using Controladores.Seguridad;
 using Entidades.Mapeos;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -27,28 +27,35 @@ namespace Controladores
         }
 
         /// <summary>
-        /// Lista sesiones de entrenamiento. Sin filtros devuelve todas,
-        /// ordenadas de la mas proxima a la mas lejana.
+        /// Lista sesiones paginadas. El atleta solo ve las suyas (filtro en SQL).
+        /// Headers: X-Total-Count, X-Page, X-Page-Size.
         /// </summary>
         [HttpGet]
         public async Task<ActionResult<IEnumerable<EntrenamientoDto>>> Listar(
             [FromQuery] DateOnly? desde,
             [FromQuery] DateOnly? hasta,
             [FromQuery] Turno? turno,
-            [FromQuery] int? sesion)
+            [FromQuery] int? sesion,
+            [FromQuery] int? pagina,
+            [FromQuery] int? tamano)
         {
-            var entrenamientos = await _entrenamientoRepositorio.ObtenerAsync(desde, hasta, turno, sesion);
-
+            int? atletaId = null;
             if (Identidad.EsAtleta(User))
             {
-                var propio = Identidad.AtletaId(User);
-                entrenamientos = propio is null
-                    ? []
-                    : entrenamientos.Where(e => e.Atletas.Any(a => a.AtletaId == propio)).ToList();
+                atletaId = Identidad.AtletaId(User);
+                if (atletaId is null)
+                {
+                    PaginacionRespuesta.Exponer(this, new ResultadoPaginado<Entrenamiento>([], 0, 1, 0));
+                    return Ok(Array.Empty<EntrenamientoDto>());
+                }
             }
 
+            var paginaResultado = await _entrenamientoRepositorio.ObtenerAsync(
+                desde, hasta, turno, sesion, atletaId, pagina, tamano);
+            PaginacionRespuesta.Exponer(this, paginaResultado);
+
             // En el listado no hacen falta los atletas de cada sesion.
-            var dtos = entrenamientos
+            var dtos = paginaResultado.Items
                 .Select(e => e.ToDto())
                 .Select(dto =>
                 {
